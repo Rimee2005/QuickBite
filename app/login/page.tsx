@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import { ArrowLeft, Mail, Lock, Coffee } from "lucide-react"
 import Link from "next/link"
-import { signIn } from "next-auth/react"
+import { signIn, getSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 
 export default function LoginPage() {
@@ -42,11 +42,22 @@ export default function LoginPage() {
         throw new Error(result.error)
       }
 
+      // Wait for session to update, then check user type
+      const session = await getSession()
+      const userType = session?.user?.type || 'student'
+      
+      let redirectPath = '/student/dashboard'
+      if (userType === 'admin') {
+        redirectPath = '/admin/dashboard'
+      } else if (userType === 'teacher') {
+        redirectPath = '/student/dashboard' // Teachers use student dashboard for now
+      }
+
       toast({
         title: "Login successful! 🎉",
         description: "Welcome back!",
       })
-      router.push('/student/dashboard')
+      router.push(redirectPath)
       router.refresh()
     } catch (error) {
       toast({

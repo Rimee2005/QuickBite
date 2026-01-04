@@ -29,8 +29,22 @@ export async function connectToDatabase() {
 
   try {
     cached.conn = await cached.promise
-  } catch (e) {
+    console.log("✅ MongoDB connected successfully")
+  } catch (e: any) {
     cached.promise = null
+    console.error("MongoDB connection error:", e)
+    
+    // Provide more helpful error messages
+    if (e?.code === 8000 || e?.codeName === 'AtlasError') {
+      throw new Error("MongoDB authentication failed")
+    }
+    
+    if (e?.code === 'ENOTFOUND' || e?.code === 'ECONNREFUSED') {
+      throw new Error(
+        "Cannot connect to MongoDB. Please check your connection string and ensure MongoDB is accessible."
+      )
+    }
+    
     throw e
   }
 

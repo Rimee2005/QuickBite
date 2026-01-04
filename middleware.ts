@@ -13,8 +13,8 @@ export default withAuth(
       return NextResponse.redirect(new URL("/admin/dashboard", req.url))
     }
 
-    // Redirect student trying to access admin routes
-    if (isAdminRoute && token?.type === "student") {
+    // Redirect student or teacher trying to access admin routes
+    if (isAdminRoute && (token?.type === "student" || token?.type === "teacher")) {
       return NextResponse.redirect(new URL("/student/dashboard", req.url))
     }
 

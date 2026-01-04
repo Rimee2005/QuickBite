@@ -5,9 +5,12 @@
   "scripts": {
     "build": "next build",
     "dev": "next dev",
+    "dev:socket": "node server.js",
     "lint": "next lint",
     "start": "next start",
     "test-db": "ts-node scripts/test-db.ts",
+    "test-mongodb": "ts-node scripts/test-mongodb-connection.ts",
+    "verify-mongodb": "ts-node scripts/verify-mongodb-config.ts",
     "test-registration": "ts-node scripts/test-registration.ts",
     "init-db": "node scripts/init-db.js"
   },

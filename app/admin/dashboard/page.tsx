@@ -1,57 +1,148 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
-import { Check, Clock, Bell, LogOut, Settings, Menu, X } from "lucide-react"
+import { Check, Clock, Bell, LogOut, Settings, Menu, X, Wifi, WifiOff } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useLanguage } from "@/contexts/language-context"
+import { useSocket } from "@/hooks/useSocket"
+import { useAuth } from "@/contexts/auth-context"
+
+interface OrderItem {
+  menuItemId: string
+  name: string
+  quantity: number
+  price: number
+}
 
 interface Order {
-  id: string
-  studentName: string
-  items: string[]
-  orderTime: string
-  status: "pending" | "accepted" | "ready"
-  eta?: number
+  _id?: string
+  orderId: string
+  userId: string
+  userName: string
+  userEmail: string
+  items: OrderItem[]
+  totalAmount: number
+  status: "pending" | "accepted" | "preparing" | "ready" | "completed" | "cancelled"
+  estimatedTime?: number
+  createdAt: string
+  updatedAt: string
 }
 
 export default function AdminDashboard() {
-  const [orders, setOrders] = useState<Order[]>([
-    {
-      id: "#QB-1325",
-      studentName: "Rimjhim Sharma",
-      items: ["1x Burger 🍔", "1x Cold Coffee ☕"],
-      orderTime: "2:30 PM",
-      status: "pending",
-    },
-    {
-      id: "#QB-1324",
-      studentName: "Arjun Patel",
-      items: ["2x Samosa 🥟", "1x Mango Juice 🥭"],
-      orderTime: "2:25 PM",
-      status: "accepted",
-      eta: 10,
-    },
-    {
-      id: "#QB-1323",
-      studentName: "Priya Singh",
-      items: ["1x Chicken Biryani 🍛"],
-      orderTime: "2:20 PM",
-      status: "ready",
-    },
-  ])
-
+  const [orders, setOrders] = useState<Order[]>([])
+  const [loading, setLoading] = useState(true)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { toast } = useToast()
   const router = useRouter()
   const { t } = useLanguage()
+  const { user } = useAuth()
+  const { isConnected, notifications, emitStatusUpdate } = useSocket('admin')
 
-  // Make ETA selection mandatory
+  // Fetch orders from API
+  const fetchOrders = async () => {
+    try {
+      const response = await fetch('/api/orders')
+      if (response.ok) {
+        const data = await response.json()
+        // Filter out completed and cancelled orders for active queue
+        const activeOrders = data.orders.filter(
+          (order: Order) => order.status !== 'completed' && order.status !== 'cancelled'
+        )
+        setOrders(activeOrders)
+      }
+    } catch (error) {
+      console.error('Error fetching orders:', error)
+      toast({
+        title: "Error loading orders",
+        description: "Failed to fetch orders. Please refresh the page.",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Fetch orders on mount
+  useEffect(() => {
+    fetchOrders()
+  }, [])
+
+  // Listen for new orders via Socket.IO
+  useEffect(() => {
+    if (notifications.length > 0) {
+      const latestNotification = notifications[0]
+      if (latestNotification.type === 'new-order' && latestNotification.data) {
+        const newOrder = latestNotification.data as Order
+        setOrders((prev) => [newOrder, ...prev])
+        toast({
+          title: "🛒 New Order Received!",
+          description: `Order ${newOrder.orderId} from ${newOrder.userName}`,
+        })
+      }
+    }
+  }, [notifications, toast])
+
+  // Update order status
+  const updateOrderStatus = async (
+    orderId: string, 
+    status: 'accepted' | 'preparing' | 'ready',
+    estimatedTime?: number
+  ) => {
+    try {
+      const order = orders.find(o => o.orderId === orderId)
+      if (!order) return
+
+      const response = await fetch(`/api/orders/${orderId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status, estimatedTime }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to update order status')
+      }
+
+      const data = await response.json()
+      const updatedOrder = data.order
+
+      // Update local state
+      setOrders((prev) =>
+        prev.map((o) => (o.orderId === orderId ? updatedOrder : o))
+      )
+
+      // Emit socket event to notify customer
+      if (isConnected) {
+        emitStatusUpdate({
+          orderId: updatedOrder.orderId,
+          status: updatedOrder.status,
+          userId: updatedOrder.userId,
+          estimatedTime: updatedOrder.estimatedTime,
+        })
+      }
+
+      toast({
+        title: "Status updated ✅",
+        description: `Order ${orderId} status updated to ${status}. Customer will be notified.`,
+      })
+    } catch (error: any) {
+      console.error('Error updating order status:', error)
+      toast({
+        title: "Update failed ❌",
+        description: error.message || "Failed to update order status",
+        variant: "destructive",
+      })
+    }
+  }
+
+  // Accept order (with ETA)
   const acceptOrder = (orderId: string, eta: number) => {
     if (!eta) {
       toast({
@@ -61,22 +152,17 @@ export default function AdminDashboard() {
       })
       return
     }
-
-    setOrders((prev) =>
-      prev.map((order) => (order.id === orderId ? { ...order, status: "accepted" as const, eta } : order)),
-    )
-    toast({
-      title: "Order accepted ✅",
-      description: `Order ${orderId} accepted with ${eta} min ETA (Student will be notified)`,
-    })
+    updateOrderStatus(orderId, 'accepted', eta)
   }
 
+  // Mark as preparing
+  const markAsPreparing = (orderId: string) => {
+    updateOrderStatus(orderId, 'preparing')
+  }
+
+  // Mark as ready
   const markAsReady = (orderId: string) => {
-    setOrders((prev) => prev.map((order) => (order.id === orderId ? { ...order, status: "ready" as const } : order)))
-    toast({
-      title: "Order ready! 🔔",
-      description: `Order ${orderId} is ready for pickup`,
-    })
+    updateOrderStatus(orderId, 'ready')
   }
 
   const getStatusColor = (status: string) => {
@@ -84,12 +170,26 @@ export default function AdminDashboard() {
       case "pending":
         return "bg-yellow-100 text-yellow-800 hover:bg-yellow-100 dark:bg-yellow-900 dark:text-yellow-200"
       case "accepted":
+      case "preparing":
         return "bg-blue-100 text-blue-800 hover:bg-blue-100 dark:bg-blue-900 dark:text-blue-200"
       case "ready":
         return "bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-900 dark:text-green-200"
       default:
         return "bg-gray-100 text-gray-800 hover:bg-gray-100 dark:bg-gray-700 dark:text-gray-200"
     }
+  }
+
+  const formatOrderTime = (dateString: string) => {
+    const date = new Date(dateString)
+    return date.toLocaleTimeString('en-US', { 
+      hour: 'numeric', 
+      minute: '2-digit',
+      hour12: true 
+    })
+  }
+
+  const formatOrderItems = (items: OrderItem[]) => {
+    return items.map(item => `${item.quantity}x ${item.name}`)
   }
 
   const handleLogout = () => {
@@ -158,119 +258,178 @@ export default function AdminDashboard() {
       <div className="px-4 sm:px-6 lg:px-8 py-6 sm:py-8 max-w-7xl mx-auto">
         {/* Header - Mobile Optimized */}
         <div className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white mb-2">
-            {t("admin.order_queue")}
-          </h1>
+          <div className="flex items-center justify-between mb-2">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white">
+              {t("admin.order_queue")}
+            </h1>
+            <div className="flex items-center gap-2">
+              {isConnected ? (
+                <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                  <Wifi className="w-3 h-3 mr-1" />
+                  Live
+                </Badge>
+              ) : (
+                <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+                  <WifiOff className="w-3 h-3 mr-1" />
+                  Offline
+                </Badge>
+              )}
+            </div>
+          </div>
           <p className="text-gray-600 dark:text-gray-300 text-sm sm:text-base">{t("admin.manage_orders")}</p>
         </div>
 
+        {/* Loading State */}
+        {loading && (
+          <div className="text-center py-12">
+            <p className="text-gray-600 dark:text-gray-300">Loading orders...</p>
+          </div>
+        )}
+
         {/* Orders Grid - Mobile First */}
-        <div className="space-y-4 sm:space-y-6">
-          {orders.map((order, index) => (
-            <Card
-              key={order.id}
-              className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 dark:border-gray-700"
-              style={{
-                animationDelay: `${index * 100}ms`,
-                animation: "slideInUp 0.5s ease-out forwards",
-              }}
-            >
-              <CardHeader className="pb-4">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
-                  <div>
-                    <CardTitle className="text-lg sm:text-xl text-gray-800 dark:text-white">{order.id}</CardTitle>
-                    <p className="text-gray-600 dark:text-gray-300 text-sm sm:text-base">{order.studentName}</p>
-                  </div>
-                  <div className="flex items-center justify-between sm:justify-end space-x-4">
-                    <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">{order.orderTime}</span>
-                    <Badge className={`${getStatusColor(order.status)} text-xs sm:text-sm px-2 py-1`}>
-                      {order.status === "pending" && "⏳ Pending"}
-                      {order.status === "accepted" && "👨‍🍳 Preparing"}
-                      {order.status === "ready" && "✅ Ready"}
-                    </Badge>
-                  </div>
-                </div>
-              </CardHeader>
-
-              <CardContent className="pt-0">
-                {/* Order Items */}
-                <div className="mb-4 sm:mb-6">
-                  <h4 className="font-medium text-gray-700 dark:text-gray-300 mb-2 text-sm sm:text-base">
-                    {t("admin.order_items")}
-                  </h4>
-                  <div className="space-y-1">
-                    {order.items.map((item, index) => (
-                      <p key={index} className="text-gray-600 dark:text-gray-300 text-sm sm:text-base">
-                        {item}
-                      </p>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="space-y-3">
-                  {order.status === "pending" && (
-                    <div className="flex flex-col sm:flex-row gap-3">
-                      <div className="flex-1">
-                        <Select onValueChange={(value) => acceptOrder(order.id, Number.parseInt(value))}>
-                          <SelectTrigger className="rounded-2xl h-12 border-gray-200 dark:border-gray-600">
-                            <SelectValue placeholder={t("admin.set_eta")} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="5">5 {t("common.minutes")}</SelectItem>
-                            <SelectItem value="10">10 {t("common.minutes")}</SelectItem>
-                            <SelectItem value="15">15 {t("common.minutes")}</SelectItem>
-                            <SelectItem value="20">20 {t("common.minutes")}</SelectItem>
-                          </SelectContent>
-                        </Select>
+        {!loading && (
+          <>
+            {orders.length > 0 ? (
+              <div className="space-y-4 sm:space-y-6">
+                {orders.map((order, index) => (
+                  <Card
+                    key={order.orderId}
+                    className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 dark:border-gray-700"
+                    style={{
+                      animationDelay: `${index * 100}ms`,
+                      animation: "slideInUp 0.5s ease-out forwards",
+                    }}
+                  >
+                    <CardHeader className="pb-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+                        <div>
+                          <CardTitle className="text-lg sm:text-xl text-gray-800 dark:text-white">{order.orderId}</CardTitle>
+                          <p className="text-gray-600 dark:text-gray-300 text-sm sm:text-base">{order.userName}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">₹{order.totalAmount.toFixed(2)}</p>
+                        </div>
+                        <div className="flex items-center justify-between sm:justify-end space-x-4">
+                          <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                            {formatOrderTime(order.createdAt)}
+                          </span>
+                          <Badge className={`${getStatusColor(order.status)} text-xs sm:text-sm px-2 py-1`}>
+                            {order.status === "pending" && "⏳ Pending"}
+                            {order.status === "accepted" && "✅ Accepted"}
+                            {order.status === "preparing" && "👨‍🍳 Preparing"}
+                            {order.status === "ready" && "🎉 Ready"}
+                          </Badge>
+                        </div>
                       </div>
-                      <Button
-                        className="bg-gradient-to-r from-emerald-400 to-emerald-600 hover:from-emerald-500 hover:to-emerald-700 text-white rounded-2xl h-12 px-6 font-medium"
-                        onClick={() => acceptOrder(order.id, 10)}
-                      >
-                        <Check className="w-4 h-4 mr-2" />
-                        {t("admin.accept_order")}
-                      </Button>
-                    </div>
-                  )}
+                    </CardHeader>
 
-                  {order.status === "accepted" && (
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-3 sm:space-y-0">
-                      <div className="flex items-center space-x-2 text-blue-600 dark:text-blue-400">
-                        <Clock className="w-4 h-4" />
-                        <span className="text-sm sm:text-base">
-                          ETA: {order.eta} {t("common.minutes")}
-                        </span>
+                    <CardContent className="pt-0">
+                      {/* Order Items */}
+                      <div className="mb-4 sm:mb-6">
+                        <h4 className="font-medium text-gray-700 dark:text-gray-300 mb-2 text-sm sm:text-base">
+                          {t("admin.order_items")}
+                        </h4>
+                        <div className="space-y-1">
+                          {formatOrderItems(order.items).map((item, index) => (
+                            <p key={index} className="text-gray-600 dark:text-gray-300 text-sm sm:text-base">
+                              {item}
+                            </p>
+                          ))}
+                        </div>
                       </div>
-                      <Button
-                        className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-2xl h-12 px-6 font-medium w-full sm:w-auto"
-                        onClick={() => markAsReady(order.id)}
-                      >
-                        <Bell className="w-4 h-4 mr-2" />
-                        {t("admin.mark_ready")}
-                      </Button>
-                    </div>
-                  )}
 
-                  {order.status === "ready" && (
-                    <div className="flex items-center text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900 rounded-2xl p-4">
-                      <Check className="w-5 h-5 mr-2" />
-                      <span className="font-medium text-sm sm:text-base">{t("admin.ready_pickup")}</span>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                      {/* Action Buttons */}
+                      <div className="space-y-3">
+                        {order.status === "pending" && (
+                          <div className="flex flex-col sm:flex-row gap-3">
+                            <div className="flex-1">
+                              <Select onValueChange={(value) => acceptOrder(order.orderId, Number.parseInt(value))}>
+                                <SelectTrigger className="rounded-2xl h-12 border-gray-200 dark:border-gray-600">
+                                  <SelectValue placeholder={t("admin.set_eta")} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="5">5 {t("common.minutes") || "minutes"}</SelectItem>
+                                  <SelectItem value="10">10 {t("common.minutes") || "minutes"}</SelectItem>
+                                  <SelectItem value="15">15 {t("common.minutes") || "minutes"}</SelectItem>
+                                  <SelectItem value="20">20 {t("common.minutes") || "minutes"}</SelectItem>
+                                  <SelectItem value="30">30 {t("common.minutes") || "minutes"}</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <Button
+                              className="bg-gradient-to-r from-emerald-400 to-emerald-600 hover:from-emerald-500 hover:to-emerald-700 text-white rounded-2xl h-12 px-6 font-medium"
+                              onClick={() => acceptOrder(order.orderId, 10)}
+                            >
+                              <Check className="w-4 h-4 mr-2" />
+                              {t("admin.accept_order") || "Accept Order"}
+                            </Button>
+                          </div>
+                        )}
 
-        {/* Empty State */}
-        {orders.length === 0 && (
-          <Card className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-8 sm:p-12 text-center">
-            <div className="text-6xl sm:text-8xl mb-4">📋</div>
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-white mb-2">{t("admin.no_orders")}</h2>
-            <p className="text-gray-600 dark:text-gray-300 text-sm sm:text-base">{t("admin.orders_appear")}</p>
-          </Card>
+                        {order.status === "accepted" && (
+                          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-3 sm:space-y-0">
+                            <div className="flex items-center space-x-2 text-blue-600 dark:text-blue-400">
+                              <Clock className="w-4 h-4" />
+                              <span className="text-sm sm:text-base">
+                                ETA: {order.estimatedTime} {t("common.minutes") || "minutes"}
+                              </span>
+                            </div>
+                            <div className="flex gap-2 w-full sm:w-auto">
+                              <Button
+                                className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-2xl h-12 px-4 font-medium flex-1 sm:flex-none"
+                                onClick={() => markAsPreparing(order.orderId)}
+                              >
+                                <Clock className="w-4 h-4 mr-2" />
+                                Preparing
+                              </Button>
+                              <Button
+                                className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-2xl h-12 px-4 font-medium flex-1 sm:flex-none"
+                                onClick={() => markAsReady(order.orderId)}
+                              >
+                                <Bell className="w-4 h-4 mr-2" />
+                                {t("admin.mark_ready") || "Mark Ready"}
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+
+                        {order.status === "preparing" && (
+                          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-3 sm:space-y-0">
+                            <div className="flex items-center space-x-2 text-blue-600 dark:text-blue-400">
+                              <Clock className="w-4 h-4" />
+                              <span className="text-sm sm:text-base">
+                                {order.estimatedTime ? `ETA: ${order.estimatedTime} ${t("common.minutes") || "minutes"}` : "Preparing..."}
+                              </span>
+                            </div>
+                            <Button
+                              className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-2xl h-12 px-6 font-medium w-full sm:w-auto"
+                              onClick={() => markAsReady(order.orderId)}
+                            >
+                              <Bell className="w-4 h-4 mr-2" />
+                              {t("admin.mark_ready") || "Mark Ready"}
+                            </Button>
+                          </div>
+                        )}
+
+                        {order.status === "ready" && (
+                          <div className="flex items-center text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900 rounded-2xl p-4">
+                            <Check className="w-5 h-5 mr-2" />
+                            <span className="font-medium text-sm sm:text-base">{t("admin.ready_pickup") || "Ready for Pickup"}</span>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <Card className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-8 sm:p-12 text-center">
+                <div className="text-6xl sm:text-8xl mb-4">📋</div>
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-white mb-2">{t("admin.no_orders") || "No Orders"}</h2>
+                <p className="text-gray-600 dark:text-gray-300 text-sm sm:text-base">
+                  {t("admin.orders_appear") || "New orders will appear here in real-time"}
+                </p>
+              </Card>
+            )}
+          </>
         )}
       </div>
 

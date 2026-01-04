@@ -10,6 +10,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { useCart } from "@/contexts/cart-context"
+import { useSocket } from "@/hooks/useSocket"
 
 export default function CartPage() {
   const { toast } = useToast()
@@ -17,6 +18,7 @@ export default function CartPage() {
   const { user, isAuthenticated } = useAuth()
   const { items, updateQuantity, removeItem, clearCart, getTotalPrice } = useCart()
   const [isPlacingOrder, setIsPlacingOrder] = useState(false)
+  const { emitNewOrder, isConnected } = useSocket('customer', user?.id)
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -35,24 +37,82 @@ export default function CartPage() {
       return
     }
 
+    if (!user) {
+      toast({
+        title: "Not authenticated",
+        description: "Please login to place an order",
+        variant: "destructive",
+      })
+      return
+    }
+
     setIsPlacingOrder(true)
 
-    // Simulate order processing
-    await new Promise((resolve) => setTimeout(resolve, 2000))
+    try {
+      // Prepare order items
+      const orderItems = items.map(item => ({
+        menuItemId: item.id,
+        name: item.name,
+        quantity: item.quantity,
+        price: item.price,
+      }))
 
-    // Create order and clear cart
-    const orderId = `QB-${Date.now()}`
-    clearCart()
+      const totalAmount = getTotalPrice()
 
-    toast({
-      title: "🎉 Order placed successfully!",
-      description: `Order ${orderId} has been sent to the kitchen. You'll be notified when it's ready.`,
-    })
+      // Create order via API
+      const response = await fetch('/api/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          items: orderItems,
+          totalAmount,
+        }),
+      })
 
-    setIsPlacingOrder(false)
+      const data = await response.json()
 
-    // Redirect to order status with the new order ID
-    router.push(`/student/order-status?orderId=${orderId}`)
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to place order')
+      }
+
+      const order = data.order
+
+      // Emit socket event for real-time notification to admin
+      if (isConnected) {
+        emitNewOrder({
+          orderId: order.orderId,
+          userId: user.id,
+          userName: user.name || 'Unknown',
+          userEmail: user.email || '',
+          items: order.items,
+          totalAmount: order.totalAmount,
+          status: order.status,
+          createdAt: order.createdAt,
+        })
+      }
+
+      // Clear cart after successful order
+      clearCart()
+
+      toast({
+        title: "🎉 Order placed successfully!",
+        description: `Order ${order.orderId} has been sent to the kitchen. You'll be notified when it's ready.`,
+      })
+
+      // Redirect to order status with the new order ID
+      router.push(`/student/order-status?orderId=${order.orderId}`)
+    } catch (error: any) {
+      console.error('Error placing order:', error)
+      toast({
+        title: "Order failed ❌",
+        description: error.message || "Failed to place order. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsPlacingOrder(false)
+    }
   }
 
   if (!isAuthenticated || user?.type !== "student") {

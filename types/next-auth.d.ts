@@ -16,9 +16,9 @@ declare module "next-auth" {
     id: string
     name: string
     email: string
-    type: "student" | "admin"
+    type: "student" | "admin" | "teacher"
     registrationNumber?: string
-    role?: 'student' | 'admin' // For compatibility
+    role?: 'student' | 'admin' | 'teacher' // For compatibility
     image?: string | null
   } 
 }
@@ -27,7 +27,7 @@ declare module "next-auth/jwt" {
   /** Returned by the `jwt` callback and `auth`, when using JWT sessions */
   interface JWT {
     id: string
-    type: "student" | "admin"
+    type: "student" | "admin" | "teacher"
     registrationNumber?: string
   }
 }

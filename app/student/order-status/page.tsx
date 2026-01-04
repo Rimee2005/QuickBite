@@ -10,17 +10,30 @@ import { Clock, CheckCircle, ChefHat, Bell, ArrowLeft, MapPin, Phone, Star } fro
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
+import { useSocket } from "@/hooks/useSocket"
+
+interface Order {
+  orderId: string
+  items: Array<{ name: string; quantity: number; price: number }>
+  totalAmount: number
+  status: "pending" | "accepted" | "preparing" | "ready" | "completed" | "cancelled"
+  estimatedTime?: number
+  createdAt: string
+}
 
 export default function OrderStatusPage() {
+  const [order, setOrder] = useState<Order | null>(null)
   const [status, setStatus] = useState<"pending" | "accepted" | "preparing" | "ready" | "picked-up">("pending")
   const [estimatedTime, setEstimatedTime] = useState<number | null>(null)
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null)
   const [progress, setProgress] = useState(0)
+  const [loading, setLoading] = useState(true)
   const { toast } = useToast()
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user, isAuthenticated } = useAuth()
-  const orderId = searchParams.get("orderId") || "#QB-1321"
+  const orderId = searchParams.get("orderId")
+  const { notifications, isConnected } = useSocket('customer', user?.id)
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -29,40 +42,91 @@ export default function OrderStatusPage() {
     }
   }, [isAuthenticated, user, router])
 
-  // Simulate order status updates
+  // Fetch order from API
   useEffect(() => {
-    const acceptTimer = setTimeout(() => {
-      setStatus("accepted")
-      setEstimatedTime(15) // 15 minutes estimated time
-      setTimeRemaining(15 * 60) // 15 minutes in seconds
-      setProgress(25)
+    if (!orderId) {
       toast({
-        title: "Order accepted! 👨‍🍳",
-        description: "Your order is being prepared. Estimated time: 15 minutes",
+        title: "Invalid Order",
+        description: "Order ID is missing",
+        variant: "destructive",
       })
-    }, 3000)
-
-    const preparingTimer = setTimeout(() => {
-      setStatus("preparing")
-      setProgress(60)
-    }, 8000)
-
-    const readyTimer = setTimeout(() => {
-      setStatus("ready")
-      setProgress(100)
-      setTimeRemaining(0)
-      toast({
-        title: "🔔 Order Ready!",
-        description: "Your delicious meal is ready for pickup!",
-      })
-    }, 15000)
-
-    return () => {
-      clearTimeout(acceptTimer)
-      clearTimeout(preparingTimer)
-      clearTimeout(readyTimer)
+      router.push("/student/dashboard")
+      return
     }
-  }, [toast])
+
+    const fetchOrder = async () => {
+      try {
+        const response = await fetch(`/api/orders/${orderId}`)
+        if (response.ok) {
+          const data = await response.json()
+          const orderData = data.order
+          setOrder(orderData)
+          setStatus(orderData.status as any)
+          setEstimatedTime(orderData.estimatedTime || null)
+          if (orderData.estimatedTime) {
+            setTimeRemaining(orderData.estimatedTime * 60)
+          }
+          updateProgress(orderData.status)
+        } else {
+          throw new Error('Order not found')
+        }
+      } catch (error) {
+        console.error('Error fetching order:', error)
+        toast({
+          title: "Error",
+          description: "Failed to load order details",
+          variant: "destructive",
+        })
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchOrder()
+  }, [orderId, router, toast])
+
+  // Listen for real-time status updates via Socket.IO
+  useEffect(() => {
+    if (notifications.length > 0) {
+      const latestNotification = notifications[0]
+      if (latestNotification.type === 'status-update' && latestNotification.data) {
+        const updateData = latestNotification.data
+        if (updateData.orderId === orderId) {
+          setStatus(updateData.status as any)
+          if (updateData.estimatedTime) {
+            setEstimatedTime(updateData.estimatedTime)
+            setTimeRemaining(updateData.estimatedTime * 60)
+          }
+          updateProgress(updateData.status)
+          
+          toast({
+            title: "Status Updated! 🔔",
+            description: latestNotification.message,
+          })
+        }
+      }
+    }
+  }, [notifications, orderId, toast])
+
+  const updateProgress = (orderStatus: string) => {
+    switch (orderStatus) {
+      case 'pending':
+        setProgress(10)
+        break
+      case 'accepted':
+        setProgress(25)
+        break
+      case 'preparing':
+        setProgress(60)
+        break
+      case 'ready':
+        setProgress(100)
+        setTimeRemaining(0)
+        break
+      default:
+        setProgress(0)
+    }
+  }
 
   // Countdown timer
   useEffect(() => {

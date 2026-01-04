@@ -33,12 +33,21 @@ export const useSocket = (userRole?: 'admin' | 'customer', userId?: string) => {
       setIsConnected(true)
       console.log('🔌 Connected to socket')
 
+      // Join appropriate rooms based on user role
       if (userRole === 'admin') {
-        socketInstance.emit('join-room', 'admin')
+        socketInstance.emit('join-room', { room: 'admin', userType: 'admin' })
       } else if (userRole === 'customer') {
-        socketInstance.emit('join-room', 'customer')
+        socketInstance.emit('join-room', { 
+          room: 'customer', 
+          userType: 'customer',
+          userId: userId 
+        })
         if (userId) {
-          socketInstance.emit('join-room', `customer-${userId}`)
+          socketInstance.emit('join-room', { 
+            room: `customer-${userId}`, 
+            userType: 'customer',
+            userId: userId 
+          })
         }
       }
     })
@@ -53,22 +62,28 @@ export const useSocket = (userRole?: 'admin' | 'customer', userId?: string) => {
       setIsConnected(false)
     })
 
-    socketInstance.on('order-notification', (data) => {
+    // Listen for new orders (admin only)
+    socketInstance.on('new-order', (data) => {
       addNotification({
         id: Date.now().toString(),
         type: 'new-order',
-        message: data.message,
-        data: data.data,
+        message: data.message || 'New order received',
+        data: data.order,
         timestamp: data.timestamp
       })
     })
 
+    // Listen for order status changes (customer only)
     socketInstance.on('order-status-changed', (data) => {
       addNotification({
         id: Date.now().toString(),
         type: 'status-update',
-        message: data.message,
-        data: data.data,
+        message: data.message || 'Order status updated',
+        data: {
+          orderId: data.orderId,
+          status: data.status,
+          estimatedTime: data.estimatedTime,
+        },
         timestamp: data.timestamp
       })
     })
@@ -103,13 +118,22 @@ export const useSocket = (userRole?: 'admin' | 'customer', userId?: string) => {
 
   const emitNewOrder = (orderData: any) => {
     if (socketRef.current?.connected) {
-      socketRef.current.emit('new-order', orderData)
+      socketRef.current.emit('order-placed', orderData)
+    } else {
+      console.warn('Socket not connected. Cannot emit order.')
     }
   }
 
-  const emitStatusUpdate = (updateData: any) => {
+  const emitStatusUpdate = (updateData: {
+    orderId: string
+    status: string
+    userId: string
+    estimatedTime?: number
+  }) => {
     if (socketRef.current?.connected) {
       socketRef.current.emit('order-status-update', updateData)
+    } else {
+      console.warn('Socket not connected. Cannot emit status update.')
     }
   }
 

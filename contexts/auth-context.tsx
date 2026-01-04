@@ -9,7 +9,7 @@ interface AuthContextType {
     id: string
     name: string
     email: string
-    type: "student" | "admin"
+    type: "student" | "admin" | "teacher"
   } | null
   login: (email: string, password: string) => Promise<boolean>
   logout: () => Promise<void>
@@ -51,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     id: session.user.id,
     name: session.user.name || "",
     email: session.user.email || "",
-    type: session.user.type as "student" | "admin",
+    type: session.user.type as "student" | "admin" | "teacher",
   } : null
 
   return (

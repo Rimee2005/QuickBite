@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import { ArrowLeft, Mail, Lock, Shield } from "lucide-react"
 import Link from "next/link"
-import { signIn, getSession } from "next-auth/react"
+import { signIn, getSession, signOut } from "next-auth/react"
 import { useRouter } from "next/navigation"
 
 export default function AdminLoginPage() {
@@ -58,7 +58,7 @@ export default function AdminLoginPage() {
           description: "You are not an admin.",
           variant: "destructive",
         })
-        await signIn("credentials", { redirect: false }) // force sign out
+        await signOut({ redirect: false })
       }
     } catch (error) {
       toast({
