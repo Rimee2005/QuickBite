@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useToast } from "@/hooks/use-toast"
 import { Plus, Edit, Trash2, ArrowLeft } from "lucide-react"
 import Link from "next/link"
+import { useLanguage } from "@/contexts/language-context"
 
 interface MenuItem {
   id: number
@@ -39,6 +40,7 @@ export default function MenuManagementPage() {
   })
 
   const { toast } = useToast()
+  const { t } = useLanguage()
 
   const resetForm = () => {
     setFormData({ name: "", price: "", category: "", emoji: "" })
@@ -48,8 +50,8 @@ export default function MenuManagementPage() {
   const handleAddItem = () => {
     if (!formData.name || !formData.price || !formData.category || !formData.emoji) {
       toast({
-        title: "Error ❌",
-        description: "Please fill all fields",
+        title: `${t("admin.error_loading")} ❌`,
+        description: t("admin.fill_all_fields"),
         variant: "destructive",
       })
       return
@@ -67,16 +69,16 @@ export default function MenuManagementPage() {
     setIsAddDialogOpen(false)
     resetForm()
     toast({
-      title: "Item added! ✅",
-      description: `${formData.name} has been added to the menu`,
+      title: `${t("admin.item_added")} ✅`,
+      description: `${formData.name} ${t("admin.added_to_menu")}`,
     })
   }
 
   const handleEditItem = () => {
     if (!editingItem || !formData.name || !formData.price || !formData.category || !formData.emoji) {
       toast({
-        title: "Error ❌",
-        description: "Please fill all fields",
+        title: `${t("admin.error_loading")} ❌`,
+        description: t("admin.fill_all_fields"),
         variant: "destructive",
       })
       return
@@ -98,16 +100,16 @@ export default function MenuManagementPage() {
 
     resetForm()
     toast({
-      title: "Item updated! ✅",
-      description: `${formData.name} has been updated`,
+      title: `${t("admin.item_updated")} ✅`,
+      description: `${formData.name} ${t("admin.has_been_updated")}`,
     })
   }
 
   const handleDeleteItem = (id: number) => {
     setMenuItems((prev) => prev.filter((item) => item.id !== id))
     toast({
-      title: "Item deleted! 🗑️",
-      description: "Menu item has been removed",
+      title: `${t("admin.item_deleted")} 🗑️`,
+      description: t("admin.menu_item_removed"),
     })
   }
 
@@ -130,26 +132,26 @@ export default function MenuManagementPage() {
             <Link href="/admin/dashboard">
               <Button variant="ghost" className="mr-4">
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Dashboard
+                {t("admin.back_to_dashboard")}
               </Button>
             </Link>
-            <h1 className="text-3xl font-bold text-gray-800">Manage Menu 🍽️</h1>
+            <h1 className="text-3xl font-bold text-gray-800">{t("admin.manage_menu_title")} 🍽️</h1>
           </div>
 
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
               <Button className="btn-primary">
                 <Plus className="w-4 h-4 mr-2" />
-                Add New Item
+                {t("admin.add_new_item")}
               </Button>
             </DialogTrigger>
             <DialogContent className="rounded-[1.25rem]">
               <DialogHeader>
-                <DialogTitle>Add New Menu Item</DialogTitle>
+                <DialogTitle>{t("admin.add_new_menu_item")}</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="name">Item Name</Label>
+                  <Label htmlFor="name">{t("admin.item_name")}</Label>
                   <Input
                     id="name"
                     value={formData.name}
@@ -159,7 +161,7 @@ export default function MenuManagementPage() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="emoji">Emoji</Label>
+                  <Label htmlFor="emoji">{t("admin.item_emoji")}</Label>
                   <Input
                     id="emoji"
                     value={formData.emoji}
@@ -169,7 +171,7 @@ export default function MenuManagementPage() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="price">Price (₹)</Label>
+                  <Label htmlFor="price">{t("admin.item_price")}</Label>
                   <Input
                     id="price"
                     type="number"
@@ -180,23 +182,23 @@ export default function MenuManagementPage() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="category">Category</Label>
+                  <Label htmlFor="category">{t("admin.item_category")}</Label>
                   <Select
                     value={formData.category}
                     onValueChange={(value) => setFormData((prev) => ({ ...prev, category: value }))}
                   >
                     <SelectTrigger className="rounded-[1.25rem]">
-                      <SelectValue placeholder="Select category" />
+                      <SelectValue placeholder={t("admin.select_category")} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Snacks">Snacks</SelectItem>
-                      <SelectItem value="Beverages">Beverages</SelectItem>
-                      <SelectItem value="Meals">Meals</SelectItem>
+                      <SelectItem value="Snacks">{t("dashboard.categories.snacks")}</SelectItem>
+                      <SelectItem value="Beverages">{t("dashboard.categories.beverages")}</SelectItem>
+                      <SelectItem value="Meals">{t("dashboard.categories.meals")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <Button onClick={handleAddItem} className="w-full btn-primary">
-                  Add Item
+                  {t("admin.add_item")}
                 </Button>
               </div>
             </DialogContent>
@@ -226,16 +228,16 @@ export default function MenuManagementPage() {
                         onClick={() => startEdit(item)}
                       >
                         <Edit className="w-4 h-4 mr-1" />
-                        Edit
+                        {t("admin.edit_item")}
                       </Button>
                     </DialogTrigger>
                     <DialogContent className="rounded-[1.25rem]">
                       <DialogHeader>
-                        <DialogTitle>Edit Menu Item</DialogTitle>
+                        <DialogTitle>{t("admin.edit_menu_item")}</DialogTitle>
                       </DialogHeader>
                       <div className="space-y-4">
                         <div>
-                          <Label htmlFor="edit-name">Item Name</Label>
+                          <Label htmlFor="edit-name">{t("admin.item_name")}</Label>
                           <Input
                             id="edit-name"
                             value={formData.name}
@@ -244,7 +246,7 @@ export default function MenuManagementPage() {
                           />
                         </div>
                         <div>
-                          <Label htmlFor="edit-emoji">Emoji</Label>
+                          <Label htmlFor="edit-emoji">{t("admin.item_emoji")}</Label>
                           <Input
                             id="edit-emoji"
                             value={formData.emoji}
@@ -253,7 +255,7 @@ export default function MenuManagementPage() {
                           />
                         </div>
                         <div>
-                          <Label htmlFor="edit-price">Price (₹)</Label>
+                          <Label htmlFor="edit-price">{t("admin.item_price")}</Label>
                           <Input
                             id="edit-price"
                             type="number"
@@ -263,7 +265,7 @@ export default function MenuManagementPage() {
                           />
                         </div>
                         <div>
-                          <Label htmlFor="edit-category">Category</Label>
+                          <Label htmlFor="edit-category">{t("admin.item_category")}</Label>
                           <Select
                             value={formData.category}
                             onValueChange={(value) => setFormData((prev) => ({ ...prev, category: value }))}
@@ -272,14 +274,14 @@ export default function MenuManagementPage() {
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="Snacks">Snacks</SelectItem>
-                              <SelectItem value="Beverages">Beverages</SelectItem>
-                              <SelectItem value="Meals">Meals</SelectItem>
+                              <SelectItem value="Snacks">{t("dashboard.categories.snacks")}</SelectItem>
+                              <SelectItem value="Beverages">{t("dashboard.categories.beverages")}</SelectItem>
+                              <SelectItem value="Meals">{t("dashboard.categories.meals")}</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
                         <Button onClick={handleEditItem} className="w-full btn-primary">
-                          Update Item
+                          {t("admin.update_item")}
                         </Button>
                       </div>
                     </DialogContent>

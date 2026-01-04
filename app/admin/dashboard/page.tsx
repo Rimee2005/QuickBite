@@ -59,8 +59,8 @@ export default function AdminDashboard() {
     } catch (error) {
       console.error('Error fetching orders:', error)
       toast({
-        title: "Error loading orders",
-        description: "Failed to fetch orders. Please refresh the page.",
+        title: t("admin.error_loading"),
+        description: t("admin.failed_fetch"),
         variant: "destructive",
       })
     } finally {
@@ -81,8 +81,8 @@ export default function AdminDashboard() {
         const newOrder = latestNotification.data as Order
         setOrders((prev) => [newOrder, ...prev])
         toast({
-          title: "🛒 New Order Received!",
-          description: `Order ${newOrder.orderId} from ${newOrder.userName}`,
+          title: `🛒 ${t("admin.new_order_received")}`,
+          description: `${t("admin.order_from")} ${newOrder.orderId} ${t("admin.from")} ${newOrder.userName}`,
         })
       }
     }
@@ -129,14 +129,14 @@ export default function AdminDashboard() {
       }
 
       toast({
-        title: "Status updated ✅",
-        description: `Order ${orderId} status updated to ${status}. Customer will be notified.`,
+        title: `${t("admin.status_updated")} ✅`,
+        description: t("admin.status_updated_desc"),
       })
     } catch (error: any) {
       console.error('Error updating order status:', error)
       toast({
-        title: "Update failed ❌",
-        description: error.message || "Failed to update order status",
+        title: `${t("admin.error_updating")} ❌`,
+        description: error.message || t("admin.error_updating_desc"),
         variant: "destructive",
       })
     }
@@ -146,8 +146,8 @@ export default function AdminDashboard() {
   const acceptOrder = (orderId: string, eta: number) => {
     if (!eta) {
       toast({
-        title: "Please set ETA first! ⏰",
-        description: "You must set estimated preparation time before accepting order",
+        title: `${t("admin.set_eta_first")} ⏰`,
+        description: t("admin.set_eta_first_desc"),
         variant: "destructive",
       })
       return

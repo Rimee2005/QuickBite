@@ -10,6 +10,7 @@ import { ArrowLeft, Mail, Lock, Coffee } from "lucide-react"
 import Link from "next/link"
 import { signIn, getSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
+import { useLanguage } from "@/contexts/language-context"
 
 export default function LoginPage() {
   const [formData, setFormData] = useState({
@@ -19,6 +20,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
   const router = useRouter()
+  const { t } = useLanguage()
 
   const handleChange = (field: string, value: string) => {
     setFormData(prev => ({
@@ -54,15 +56,15 @@ export default function LoginPage() {
       }
 
       toast({
-        title: "Login successful! 🎉",
-        description: "Welcome back!",
+        title: t("login.success"),
+        description: t("login.welcome_back_msg"),
       })
       router.push(redirectPath)
       router.refresh()
     } catch (error) {
       toast({
-        title: "Login failed ❌",
-        description: error instanceof Error ? error.message : "Invalid credentials",
+        title: t("login.failed"),
+        description: error instanceof Error ? error.message : t("login.invalid_credentials"),
         variant: "destructive",
       })
     } finally {
@@ -76,7 +78,7 @@ export default function LoginPage() {
         <Link href="/">
           <Button variant="ghost" size="sm" className="rounded-full p-2 sm:p-3 hover:bg-white/20 transition-colors">
             <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-            <span className="ml-2 hidden sm:inline">Back to Home</span>
+            <span className="ml-2 hidden sm:inline">{t("login.back_home")}</span>
           </Button>
         </Link>
       </div>
@@ -87,10 +89,10 @@ export default function LoginPage() {
             <Coffee className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
           </div>
           <CardTitle className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
-            Welcome Back!
+            {t("login.welcome_back")}
           </CardTitle>
           <CardDescription>
-            Login to order your favorite meals
+            {t("login.login_to_order")}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -99,12 +101,12 @@ export default function LoginPage() {
             <div className="space-y-2">
               <Label htmlFor="email" className="text-sm font-medium flex items-center gap-2">
                 <Mail className="w-4 h-4 text-gray-500" />
-                Email
+                {t("login.email")}
               </Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="john@example.com"
+                placeholder={t("login.email_placeholder")}
                 value={formData.email}
                 onChange={(e) => handleChange('email', e.target.value)}
                 required
@@ -116,12 +118,12 @@ export default function LoginPage() {
             <div className="space-y-2">
               <Label htmlFor="password" className="text-sm font-medium flex items-center gap-2">
                 <Lock className="w-4 h-4 text-gray-500" />
-                Password
+                {t("login.password")}
               </Label>
               <Input
                 id="password"
                 type="password"
-                placeholder="Enter your password"
+                placeholder={t("login.password_placeholder")}
                 value={formData.password}
                 onChange={(e) => handleChange('password', e.target.value)}
                 required
@@ -138,18 +140,18 @@ export default function LoginPage() {
               {isLoading ? (
                 <div className="flex items-center justify-center space-x-2">
                   <div className="w-5 h-5 border-3 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Logging you in...</span>
+                  <span>{t("login.logging_you_in")}</span>
                 </div>
               ) : (
-                'Login'
+                t("login.login")
               )}
             </Button>
 
             {/* Register Link */}
             <p className="text-center text-sm text-gray-600 dark:text-gray-400">
-              Don&apos;t have an account?{' '}
+              {t("login.no_account")}{' '}
               <Link href="/register" className="text-emerald-600 hover:text-emerald-700 hover:underline font-medium transition-colors">
-                Register here
+                {t("login.register_here")}
               </Link>
             </p>
           </form>

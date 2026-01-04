@@ -97,8 +97,8 @@ export default function StudentDashboard() {
       emoji: item.emoji,
     })
     toast({
-      title: "Added to cart! 🛒",
-      description: `${item.name} ${item.emoji} added to your cart`,
+      title: `${t("dashboard.added_to_cart")} 🛒`,
+      description: `${item.name} ${item.emoji} ${t("dashboard.added_desc")}`,
     })
   }
 
@@ -110,8 +110,8 @@ export default function StudentDashboard() {
   const handleLogout = () => {
     logout()
     toast({
-      title: "Logged out successfully! 👋",
-      description: "See you next time!",
+      title: `${t("dashboard.logged_out")} 👋`,
+      description: t("dashboard.see_you"),
     })
     router.push("/")
   }
@@ -314,8 +314,8 @@ export default function StudentDashboard() {
         {filteredItems.length === 0 && (
           <div className="text-center py-12">
             <div className="text-6xl mb-4">🔍</div>
-            <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">No items found</h3>
-            <p className="text-gray-600 dark:text-gray-300">Try adjusting your search or category filter</p>
+            <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">{t("dashboard.no_items")}</h3>
+            <p className="text-gray-600 dark:text-gray-300">{t("dashboard.try_adjusting")}</p>
           </div>
         )}
       </div>
