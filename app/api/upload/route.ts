@@ -5,7 +5,7 @@ import { uploadImageToCloudinary } from '@/lib/cloudinary'
 
 /**
  * POST /api/upload
- * Upload image to Cloudinary (admin only)
+ * Upload image to Cloudinary (admin for menu items, students for reviews)
  */
 export async function POST(req: NextRequest) {
   try {
@@ -18,16 +18,17 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Only admins can upload images
-    if (session.user.type !== 'admin') {
+    // Admins and students can upload images (students for reviews)
+    if (session.user.type !== 'admin' && session.user.type !== 'student') {
       return NextResponse.json(
-        { error: 'Forbidden. Admin access required.' },
+        { error: 'Forbidden. Admin or student access required.' },
         { status: 403 }
       )
     }
 
     const formData = await req.formData()
     const file = formData.get('image') as File
+    const folder = formData.get('folder') as string // Optional folder parameter
 
     if (!file) {
       return NextResponse.json(
@@ -44,10 +45,11 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Validate file size (max 10MB)
-    if (file.size > 10 * 1024 * 1024) {
+    // Validate file size (max 10MB for admins, 5MB for students)
+    const maxSize = session.user.type === 'admin' ? 10 * 1024 * 1024 : 5 * 1024 * 1024
+    if (file.size > maxSize) {
       return NextResponse.json(
-        { error: 'File too large. Maximum size is 10MB.' },
+        { error: `File too large. Maximum size is ${maxSize / (1024 * 1024)}MB.` },
         { status: 400 }
       )
     }
@@ -56,8 +58,13 @@ export async function POST(req: NextRequest) {
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
 
+    // Determine folder based on user type or provided folder
+    const uploadFolder = folder || (session.user.type === 'admin' 
+      ? 'qickbite/menu-items' 
+      : 'qickbite/reviews')
+
     // Upload to Cloudinary with the file's MIME type
-    const result = await uploadImageToCloudinary(buffer, 'qickbite/menu-items', file.type)
+    const result = await uploadImageToCloudinary(buffer, uploadFolder, file.type)
 
     return NextResponse.json({
       success: true,

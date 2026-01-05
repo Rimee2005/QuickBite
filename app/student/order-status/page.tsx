@@ -24,7 +24,7 @@ interface Order {
 
 export default function OrderStatusPage() {
   const [order, setOrder] = useState<Order | null>(null)
-  const [status, setStatus] = useState<"pending" | "accepted" | "preparing" | "ready" | "picked-up">("pending")
+  const [status, setStatus] = useState<"pending" | "accepted" | "preparing" | "ready" | "completed">("pending")
   const [estimatedTime, setEstimatedTime] = useState<number | null>(null)
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null)
   const [progress, setProgress] = useState(0)
@@ -152,12 +152,34 @@ export default function OrderStatusPage() {
     return `${mins}:${secs.toString().padStart(2, "0")}`
   }
 
-  const markAsPickedUp = () => {
-    setStatus("picked-up")
-    toast({
-      title: `✅ ${t("status.order_complete")}`,
-      description: t("status.thank_you"),
-    })
+  const markAsPickedUp = async () => {
+    if (!orderId) return
+
+    try {
+      const response = await fetch(`/api/orders/${orderId}/complete`, {
+        method: 'POST',
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to mark order as completed')
+      }
+
+      setStatus("completed")
+      setOrder((prev) => prev ? { ...prev, status: 'completed' } : null)
+      
+      toast({
+        title: `✅ ${t("status.order_complete")}`,
+        description: "Order marked as completed! Check your email for rating & review link.",
+      })
+    } catch (error: any) {
+      console.error('Error marking order as completed:', error)
+      toast({
+        title: "Error",
+        description: error.message || "Failed to mark order as completed",
+        variant: "destructive",
+      })
+    }
   }
 
   const getStatusIcon = () => {
@@ -170,7 +192,7 @@ export default function OrderStatusPage() {
         return "🔥"
       case "ready":
         return "🔔"
-      case "picked-up":
+      case "completed":
         return "✅"
       default:
         return "⏳"
@@ -187,7 +209,7 @@ export default function OrderStatusPage() {
         return "from-purple-400 to-purple-600"
       case "ready":
         return "from-green-400 to-green-600"
-      case "picked-up":
+      case "completed":
         return "from-emerald-400 to-emerald-600"
       default:
         return "from-gray-400 to-gray-600"
@@ -361,7 +383,7 @@ export default function OrderStatusPage() {
                     </div>
                   )}
 
-                  {status === "picked-up" && (
+                  {status === "completed" && (
                     <div className="text-center space-y-6">
                       <div className="w-20 h-20 bg-emerald-100 dark:bg-emerald-900 rounded-full flex items-center justify-center mx-auto">
                         <CheckCircle className="w-10 h-10 text-emerald-600 dark:text-emerald-400" />
@@ -375,28 +397,33 @@ export default function OrderStatusPage() {
                         </p>
                       </div>
 
-                      {/* Rating Section */}
+                      {/* Review Section */}
                       <div className="bg-emerald-50 dark:bg-emerald-900 rounded-2xl p-6">
                         <h4 className="font-semibold text-emerald-800 dark:text-emerald-200 mb-4">
-                          {t("status.rate_experience")}
+                          Rate & Review Your Order ⭐
                         </h4>
-                        <div className="flex justify-center space-x-2 mb-4">
-                          {[1, 2, 3, 4, 5].map((star) => (
-                            <button
-                              key={star}
-                              className="text-2xl hover:scale-110 transition-transform"
-                              onClick={() =>
-                                toast({
-                                  title: `${t("feedback.thank_you")} ⭐`,
-                                  description: `${t("status.rate_experience")} ${star} ${star !== 1 ? t("common.items") : t("common.item")}`,
-                                })
-                              }
-                            >
-                              <Star className="w-8 h-8 text-yellow-400 hover:text-yellow-500 fill-current" />
-                            </button>
-                          ))}
-                        </div>
-                        <Link href="/student/dashboard">
+                        <p className="text-sm text-emerald-700 dark:text-emerald-300 mb-4">
+                          Share your experience and help us improve!
+                        </p>
+                        {order?.items && (
+                          <div className="space-y-3">
+                            {order.items.map((item) => (
+                              <Link
+                                key={item.menuItemId}
+                                href={`/student/review?orderId=${orderId}&menuItemId=${item.menuItemId}`}
+                              >
+                                <Button
+                                  variant="outline"
+                                  className="w-full justify-between bg-white dark:bg-gray-800 hover:bg-emerald-100 dark:hover:bg-emerald-800"
+                                >
+                                  <span className="font-medium">{item.name}</span>
+                                  <Star className="w-4 h-4 ml-2 text-yellow-400" />
+                                </Button>
+                              </Link>
+                            ))}
+                          </div>
+                        )}
+                        <Link href="/student/dashboard" className="block mt-4">
                           <Button className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-bold py-3 px-6 rounded-[1.5rem] transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1">
                             {t("status.order_again")}
                           </Button>

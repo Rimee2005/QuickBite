@@ -13,7 +13,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { useCart } from "@/contexts/cart-context"
 import { useLanguage } from "@/contexts/language-context"
 import Image from "next/image"
-import { ImageIcon } from "lucide-react"
+import { ImageIcon, Star } from "lucide-react"
 
 interface FoodItem {
   _id?: string
@@ -24,11 +24,14 @@ interface FoodItem {
   image?: string
   emoji?: string
   description?: string
+  averageRating?: number
+  totalReviews?: number
 }
 
 export default function StudentDashboard() {
   const [foodItems, setFoodItems] = useState<FoodItem[]>([])
   const [loading, setLoading] = useState(true)
+  const [ratings, setRatings] = useState<Record<string, { averageRating: number; totalReviews: number }>>({})
   const [selectedCategory, setSelectedCategory] = useState("All")
   const [searchTerm, setSearchTerm] = useState("")
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -45,7 +48,24 @@ export default function StudentDashboard() {
         const response = await fetch('/api/menu')
         if (response.ok) {
           const data = await response.json()
-          setFoodItems(data.menuItems || [])
+          const items = data.menuItems || []
+          setFoodItems(items)
+
+          // Fetch ratings for all menu items
+          if (items.length > 0) {
+            const itemIds = items.map((item: FoodItem) => item._id || item.id).filter(Boolean).join(',')
+            if (itemIds) {
+              try {
+                const ratingsResponse = await fetch(`/api/reviews/stats?menuItemIds=${itemIds}`)
+                if (ratingsResponse.ok) {
+                  const ratingsData = await ratingsResponse.json()
+                  setRatings(ratingsData.stats || {})
+                }
+              } catch (error) {
+                console.error('Error fetching ratings:', error)
+              }
+            }
+          }
         } else {
           // Fallback to empty array if API fails
           setFoodItems([])
@@ -290,6 +310,38 @@ export default function StudentDashboard() {
                     <h3 className="font-bold text-base sm:text-lg text-gray-800 dark:text-white mb-1 line-clamp-1">
                       {item.name} {item.emoji || ""}
                     </h3>
+                    {item.description && (
+                      <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm mb-2 line-clamp-2">
+                        {item.description}
+                      </p>
+                    )}
+                    {/* Rating Display */}
+                    {(() => {
+                      const itemId = item._id || item.id
+                      const ratingData = itemId ? ratings[String(itemId)] : null
+                      return ratingData && ratingData.totalReviews > 0 ? (
+                        <div className="flex items-center space-x-2 mb-2">
+                          <div className="flex items-center space-x-0.5">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <Star
+                                key={star}
+                                className={`w-3 h-3 ${
+                                  star <= Math.round(ratingData.averageRating)
+                                    ? "fill-yellow-400 text-yellow-400"
+                                    : "text-gray-300"
+                                }`}
+                              />
+                            ))}
+                            <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 ml-1.5">
+                              {ratingData.averageRating.toFixed(1)}
+                            </span>
+                          </div>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                            ({ratingData.totalReviews})
+                          </span>
+                        </div>
+                      ) : null
+                    })()}
                     <p className="text-emerald-600 dark:text-emerald-400 font-bold text-lg sm:text-xl">₹{item.price}</p>
                   </div>
 

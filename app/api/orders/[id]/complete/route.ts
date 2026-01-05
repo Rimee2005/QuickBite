@@ -71,7 +71,7 @@ export async function POST(
     // Send rating & review email
     if (updatedOrder.userEmail) {
       try {
-        // Generate review link (you can customize this URL)
+        // Generate review link - user can select which item to review
         const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000'
         const reviewLink = `${baseUrl}/student/review?orderId=${updatedOrder.orderId}`
 
