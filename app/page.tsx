@@ -43,6 +43,7 @@ import {
   Circle,
 } from "lucide-react"
 import Link from "next/link"
+import Image from "next/image"
 import { useState, useEffect, useMemo } from "react"
 import { useTheme } from "next-themes"
 import { useLanguage } from "@/contexts/language-context"
@@ -240,6 +241,7 @@ export default function LandingPage() {
       name: t("food.chicken_biryani"),
       price: 120,
       emoji: "🍛",
+      image: "https://images.unsplash.com/photo-1589302168068-964664d93dc0?w=500&h=500&fit=crop&q=80",
       offer: "20% Off",
       popular: true,
     },
@@ -248,6 +250,7 @@ export default function LandingPage() {
       name: t("food.masala_dosa"),
       price: 60,
       emoji: "🥞",
+      image: "https://images.unsplash.com/photo-1631452180519-c014fe946bc7?w=500&h=500&fit=crop&q=80",
       offer: null,
       popular: true,
     },
@@ -256,6 +259,7 @@ export default function LandingPage() {
       name: t("food.paneer_butter_masala"),
       price: 100,
       emoji: "🍛",
+      image: "https://images.unsplash.com/photo-1631452180519-c014fe946bc7?w=500&h=500&fit=crop&q=80",
       offer: "15% Off",
       popular: false,
     },
@@ -264,6 +268,7 @@ export default function LandingPage() {
       name: t("food.cold_coffee"),
       price: 40,
       emoji: "☕",
+      image: "https://images.unsplash.com/photo-1517487881594-2787fef5ebf7?w=500&h=500&fit=crop&q=80",
       offer: null,
       popular: true,
     },
@@ -272,6 +277,7 @@ export default function LandingPage() {
       name: t("food.veg_burger"),
       price: 70,
       emoji: "🍔",
+      image: "https://images.unsplash.com/photo-1572802419224-296b0aeee0d9?w=500&h=500&fit=crop&q=80",
       offer: "10% Off",
       popular: false,
     },
@@ -280,6 +286,7 @@ export default function LandingPage() {
       name: t("food.fresh_juice"),
       price: 35,
       emoji: "🥤",
+      image: "https://images.unsplash.com/photo-1600271886742-f049cd451bba?w=500&h=500&fit=crop&q=80",
       offer: null,
       popular: true,
     },
@@ -627,7 +634,7 @@ export default function LandingPage() {
       </section>
 
       {/* Live Stats Section */}
-      <section className="py-10 sm:py-12 bg-gray-200 dark:bg-[#2d3748] transition-colors duration-300">
+      <section className="py-10 sm:py-12 bg-slate-300 dark:bg-slate-800 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-8 sm:mb-10">
             <div className="flex items-center justify-center gap-3 mb-3 flex-wrap">
@@ -642,79 +649,73 @@ export default function LandingPage() {
           </div>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 lg:gap-6">
-            {/* Total Orders Card - Emerald Primary */}
-            <Card className="group relative bg-gradient-to-br from-gray-300/95 via-emerald-50/90 to-gray-300/95 dark:from-gray-600 dark:via-gray-600/95 dark:to-gray-600 rounded-2xl shadow-lg hover:shadow-xl border-2 border-emerald-300/40 dark:border-emerald-600/30 p-5 sm:p-6 text-center transition-all duration-300 hover:brightness-105 hover:-translate-y-0.5 overflow-hidden">
-              {/* Subtle emerald glow effect */}
-              <div className="absolute inset-0 bg-gradient-to-br from-emerald-400/6 to-transparent dark:from-emerald-500/8 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              <div className="relative z-10">
-                <div className="w-12 h-12 sm:w-14 sm:h-14 mx-auto mb-3 sm:mb-4 bg-gradient-to-br from-emerald-200/70 to-emerald-300/50 dark:from-emerald-700/35 dark:to-emerald-600/25 rounded-lg flex items-center justify-center shadow-md group-hover:shadow-lg transition-all duration-300 ring-1 ring-emerald-400/30 dark:ring-emerald-600/25">
-                  <TrendingUp className="w-6 h-6 sm:w-7 sm:h-7 text-emerald-600 dark:text-emerald-400" />
-                </div>
-                <div className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-800 dark:text-gray-100 mb-1.5 tracking-tight">
-                  <AnimatedCounter end={247} suffix="+" />
-                </div>
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 font-medium mt-2 uppercase tracking-wide">
-                  {t("stats.total_orders")}
-                </p>
+            {/* Total Orders Card - Muted Emerald */}
+            <Card className="group bg-emerald-700 dark:bg-emerald-800 rounded-2xl shadow-md hover:shadow-lg border-0 p-5 sm:p-6 text-center transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02]">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 mx-auto mb-3 sm:mb-4 rounded-lg flex items-center justify-center">
+                <TrendingUp className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
               </div>
+              <div className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-1.5 tracking-tight">
+                <AnimatedCounter end={247} suffix="+" />
+              </div>
+              <p className="text-xs sm:text-sm text-white/90 font-medium mt-2 uppercase tracking-wide">
+                {t("stats.total_orders")}
+              </p>
             </Card>
 
-            {/* Active Admins Card - Emerald Primary with Soft Orange Accent */}
-            <Card className="group relative bg-gradient-to-br from-gray-300/95 via-emerald-50/90 to-gray-300/95 dark:from-gray-600 dark:via-gray-600/95 dark:to-gray-600 rounded-2xl shadow-lg hover:shadow-xl border-2 border-emerald-300/40 dark:border-emerald-600/30 p-5 sm:p-6 text-center transition-all duration-300 hover:brightness-105 hover:-translate-y-0.5 overflow-hidden">
-              {/* Subtle orange accent glow */}
-              <div className="absolute inset-0 bg-gradient-to-br from-orange-400/5 to-transparent dark:from-orange-500/6 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              <div className="relative z-10">
-                <div className="w-12 h-12 sm:w-14 sm:h-14 mx-auto mb-3 sm:mb-4 bg-gradient-to-br from-orange-200/60 to-orange-300/40 dark:from-orange-700/30 dark:to-orange-600/20 rounded-lg flex items-center justify-center shadow-md group-hover:shadow-lg transition-all duration-300 ring-1 ring-orange-400/25 dark:ring-orange-600/20">
-                  <Users className="w-6 h-6 sm:w-7 sm:h-7 text-orange-600 dark:text-orange-400" />
-                </div>
-                <div className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-800 dark:text-gray-100 mb-1.5 tracking-tight">
-                  <AnimatedCounter end={5} />
-                </div>
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 font-medium mt-2 uppercase tracking-wide">
-                  {t("stats.active_admins")}
-                </p>
+            {/* Active Admins Card - Warm Orange-Red */}
+            <Card className="group bg-[#ff6b35] dark:bg-[#e55a2b] rounded-2xl shadow-md hover:shadow-lg border-0 p-5 sm:p-6 text-center transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02]">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 mx-auto mb-3 sm:mb-4 rounded-lg flex items-center justify-center">
+                <Users className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
               </div>
+              <div className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-1.5 tracking-tight">
+                <AnimatedCounter end={5} />
+              </div>
+              <p className="text-xs sm:text-sm text-white/90 font-medium mt-2 uppercase tracking-wide">
+                {t("stats.active_admins")}
+              </p>
             </Card>
 
-            {/* Avg Prep Time Card - Emerald Primary with Soft Blue/Purple Accent */}
-            <Card className="group relative bg-gradient-to-br from-gray-300/95 via-emerald-50/90 to-gray-300/95 dark:from-gray-600 dark:via-gray-600/95 dark:to-gray-600 rounded-2xl shadow-lg hover:shadow-xl border-2 border-emerald-300/40 dark:border-emerald-600/30 p-5 sm:p-6 text-center sm:col-span-2 lg:col-span-1 transition-all duration-300 hover:brightness-105 hover:-translate-y-0.5 overflow-hidden">
-              {/* Subtle blue/purple accent glow */}
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-400/5 via-purple-400/5 to-transparent dark:from-blue-500/6 dark:via-purple-500/6 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              <div className="relative z-10">
-                <div className="w-12 h-12 sm:w-14 sm:h-14 mx-auto mb-3 sm:mb-4 bg-gradient-to-br from-blue-200/60 to-purple-200/40 dark:from-blue-700/30 dark:to-purple-700/20 rounded-lg flex items-center justify-center shadow-md group-hover:shadow-lg transition-all duration-300 ring-1 ring-blue-400/25 dark:ring-blue-600/20">
-                  <Timer className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600 dark:text-blue-400" />
-                </div>
-                <div className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-800 dark:text-gray-100 mb-1.5 tracking-tight">
-                  <AnimatedCounter end={12} suffix={` ${t("common.min")}`} />
-                </div>
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 font-medium mt-2 uppercase tracking-wide">
-                  {t("stats.avg_prep_time")}
-                </p>
+            {/* Avg Prep Time Card - Muted Blue */}
+            <Card className="group bg-blue-700 dark:bg-blue-800 rounded-2xl shadow-md hover:shadow-lg border-0 p-5 sm:p-6 text-center sm:col-span-2 lg:col-span-1 transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02]">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 mx-auto mb-3 sm:mb-4 rounded-lg flex items-center justify-center">
+                <Timer className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
               </div>
+              <div className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-1.5 tracking-tight">
+                <AnimatedCounter end={12} suffix={` ${t("common.min")}`} />
+              </div>
+              <p className="text-xs sm:text-sm text-white/90 font-medium mt-2 uppercase tracking-wide">
+                {t("stats.avg_prep_time")}
+              </p>
             </Card>
           </div>
         </div>
       </section>
 
       {/* Meet The Team Section */}
-      <section className="bg-white dark:bg-gray-800 py-12 sm:py-16 lg:py-20 transition-colors duration-300">
+      <section className="bg-gray-100 dark:bg-gray-700 py-10 sm:py-12 lg:py-14 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-10 sm:mb-16">
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 dark:text-white mb-3 sm:mb-4">{t("team.title")} 👥</h2>
-            <p className="text-base sm:text-lg lg:text-xl text-gray-600 dark:text-gray-300">{t("team.subtitle")}</p>
+          <div className="text-center mb-8 sm:mb-10">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 dark:text-white mb-2 sm:mb-3">{t("team.title")} 👥</h2>
+            <p className="text-base sm:text-lg text-gray-600 dark:text-gray-300">{t("team.subtitle")}</p>
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
             {teamMembers.map((member, index) => (
               <Card
                 key={index}
-                className="bg-white dark:bg-gray-700 rounded-[1.25rem] shadow-lg hover:shadow-xl transition-all duration-200 border border-gray-100 dark:border-gray-600 p-6 sm:p-8 text-center"
+                className="group bg-white/90 dark:bg-gray-600/90 rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 border border-gray-200/80 dark:border-gray-500/50 p-5 sm:p-6 text-center transform hover:-translate-y-1 hover:scale-[1.02]"
               >
-                <div className="text-4xl sm:text-5xl lg:text-6xl mb-3 sm:mb-4">{member.emoji}</div>
-                <h3 className="text-lg sm:text-xl font-bold text-gray-800 dark:text-white mb-2">{member.name}</h3>
-                <p className="text-emerald-600 dark:text-emerald-400 font-medium mb-2 text-sm sm:text-base">{member.role}</p>
-                <p className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm mb-3">{member.experience}</p>
-                <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200 text-xs sm:text-sm">
+                {/* Avatar with circular background */}
+                <div className="mb-4 sm:mb-5 flex justify-center">
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-emerald-50/80 to-emerald-100/60 dark:from-emerald-900/30 dark:to-emerald-800/20 flex items-center justify-center ring-2 ring-emerald-200/40 dark:ring-emerald-700/30 shadow-sm">
+                    <span className="text-3xl sm:text-4xl lg:text-5xl">{member.emoji}</span>
+                  </div>
+                </div>
+                
+                <h3 className="text-base sm:text-lg font-bold text-gray-800 dark:text-gray-100 mb-1.5">{member.name}</h3>
+                <p className="text-emerald-600/90 dark:text-emerald-400/80 font-medium mb-2 text-sm sm:text-base">{member.role}</p>
+                <p className="text-gray-600/80 dark:text-gray-300/70 text-xs sm:text-sm mb-3 leading-relaxed">{member.experience}</p>
+                <Badge className="bg-emerald-100/80 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200 text-xs px-2.5 py-0.5">
                   {member.specialty}
                 </Badge>
               </Card>
@@ -724,47 +725,65 @@ export default function LandingPage() {
       </section>
 
       {/* Top Picks Section */}
-      <section className="py-12 sm:py-16 lg:py-20 bg-gradient-to-br from-emerald-50 to-white dark:from-gray-900 dark:to-gray-800 transition-colors duration-300">
+      <section className="py-10 sm:py-12 lg:py-14 bg-gradient-to-br from-emerald-50/50 to-white dark:from-gray-900 dark:to-gray-800 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-10 sm:mb-16">
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 dark:text-white mb-3 sm:mb-4">{t("picks.title")} 🍽️</h2>
-            <p className="text-base sm:text-lg lg:text-xl text-gray-600 dark:text-gray-300">{t("picks.subtitle")}</p>
+          <div className="text-center mb-8 sm:mb-10">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 dark:text-white mb-2 sm:mb-3">{t("picks.title")} 🍽️</h2>
+            <p className="text-base sm:text-lg text-gray-600 dark:text-gray-300">{t("picks.subtitle")}</p>
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
             {topPicks.map((dish) => (
               <Card
                 key={dish.id}
-                className="bg-white dark:bg-gray-800 rounded-[1.25rem] shadow-lg hover:shadow-xl transition-all duration-200 border border-gray-100 dark:border-gray-700 overflow-hidden"
+                className="group bg-white dark:bg-gray-800 rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 border border-gray-100 dark:border-gray-700 overflow-hidden transform hover:-translate-y-1"
               >
-                <div className="relative">
-                  <div className="aspect-square bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-                    <span className="text-4xl sm:text-5xl lg:text-6xl">{dish.emoji}</span>
-                  </div>
+                <div className="relative h-48 sm:h-52 overflow-hidden">
+                  {dish.image ? (
+                    <Image
+                      src={dish.image}
+                      alt={dish.name}
+                      fill
+                      className="object-cover group-hover:scale-105 transition-transform duration-300"
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center">
+                      <span className="text-5xl sm:text-6xl">{dish.emoji}</span>
+                    </div>
+                  )}
+                  {/* Gradient overlay for better text readability */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
+                  
+                  {/* Badges */}
                   {dish.offer && (
-                    <Badge className="absolute top-2 left-2 sm:top-3 sm:left-3 bg-red-500 text-white hover:bg-red-500 text-xs sm:text-sm">
-                      <Flame className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-1" />
+                    <Badge className="absolute top-3 left-3 bg-gradient-to-r from-red-500 to-red-600 text-white shadow-lg border-0 text-xs sm:text-sm font-semibold px-2.5 py-1">
+                      <Flame className="w-3 h-3 mr-1" />
                       {dish.offer}
                     </Badge>
                   )}
                   {dish.popular && (
-                    <Badge className="absolute top-2 right-2 sm:top-3 sm:right-3 bg-emerald-500 text-white hover:bg-emerald-500 text-xs sm:text-sm">
+                    <Badge className="absolute top-3 right-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg border-0 text-xs sm:text-sm font-semibold px-2.5 py-1">
+                      <Star className="w-3 h-3 mr-1 fill-white" />
                       {t("picks.popular")}
                     </Badge>
                   )}
                 </div>
-                <div className="p-3 sm:p-4">
-                  <h3 className="font-semibold text-gray-800 dark:text-white mb-2 text-sm sm:text-base">{dish.name}</h3>
-                  <div className="flex items-center justify-between mb-3 sm:mb-4">
-                    <span className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">₹{dish.price}</span>
-                    {dish.offer && (
-                      <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 line-through">
-                        ₹{Math.round(dish.price / (1 - Number.parseInt(dish.offer) / 100))}
-                      </span>
-                    )}
+                
+                <div className="p-4 sm:p-5">
+                  <h3 className="font-bold text-gray-800 dark:text-white mb-2.5 text-base sm:text-lg line-clamp-1">{dish.name}</h3>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-2xl sm:text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">₹{dish.price}</span>
+                      {dish.offer && (
+                        <span className="text-sm text-gray-500 dark:text-gray-400 line-through">
+                          ₹{Math.round(dish.price / (1 - Number.parseInt(dish.offer) / 100))}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <Link href="/login">
-                    <Button className="w-full bg-emerald-400 hover:bg-emerald-500 text-white font-medium py-2 sm:py-2.5 px-4 rounded-[1.25rem] transition-all duration-200 text-sm sm:text-base">
+                    <Button className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold py-2.5 px-4 rounded-xl transition-all duration-300 text-sm sm:text-base shadow-md hover:shadow-lg">
                       {t("picks.login_to_order")}
                     </Button>
                   </Link>
