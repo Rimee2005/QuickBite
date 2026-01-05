@@ -13,10 +13,27 @@ export async function GET(req: NextRequest) {
     await connectToDatabase()
 
     const menuItems = await MenuItem.find({ available: true })
-      .sort({ category: 1, name: 1 })
+      .sort({ category: 1, 'name.en': 1 })
       .lean()
 
-    return NextResponse.json({ menuItems })
+    // Migrate old format to new format for backward compatibility
+    const migratedItems = menuItems.map((item: any) => {
+      // If name is a string (old format), convert to new format
+      if (typeof item.name === 'string') {
+        return {
+          ...item,
+          name: {
+            en: item.name,
+            hi: item.nameHi || undefined,
+            mai: item.nameMai || undefined,
+            bho: item.nameBho || undefined,
+          }
+        }
+      }
+      return item
+    })
+
+    return NextResponse.json({ menuItems: migratedItems })
   } catch (error: any) {
     console.error('Error fetching menu items:', error)
     return NextResponse.json(
@@ -70,8 +87,26 @@ export async function POST(req: NextRequest) {
 
     await connectToDatabase()
 
-    // Check if menu item with same name already exists
-    const existingItem = await MenuItem.findOne({ name })
+    // Convert name to new format if it's a string (backward compatibility)
+    let nameObj: { en: string; hi?: string; mai?: string; bho?: string }
+    if (typeof name === 'string') {
+      nameObj = { en: name }
+    } else if (name && typeof name === 'object' && name.en) {
+      nameObj = {
+        en: name.en,
+        hi: name.hi || undefined,
+        mai: name.mai || undefined,
+        bho: name.bho || undefined,
+      }
+    } else {
+      return NextResponse.json(
+        { error: 'Name must be a string or an object with at least an "en" property' },
+        { status: 400 }
+      )
+    }
+
+    // Check if menu item with same English name already exists
+    const existingItem = await MenuItem.findOne({ 'name.en': nameObj.en })
     if (existingItem) {
       return NextResponse.json(
         { error: 'Menu item with this name already exists' },
@@ -81,7 +116,7 @@ export async function POST(req: NextRequest) {
 
     // Create new menu item
     const menuItem = await MenuItem.create({
-      name,
+      name: nameObj,
       price: Number(price),
       category,
       image: image || null,

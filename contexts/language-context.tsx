@@ -8,6 +8,7 @@ interface LanguageContextType {
   language: Language
   setLanguage: (lang: Language) => void
   t: (key: string) => string
+  getTranslatedName: (item: { name: { en: string; hi?: string; mai?: string; bho?: string } | string }) => string
 }
 
 const translations = {
@@ -36,7 +37,9 @@ const translations = {
     // Location
     "location.title": "Find Us Easily",
     "location.address": "Canteen, College Campus",
+    "location.full_address": "WIT, Mansaar Colony, Darbhanga, Bihar 846008",
     "location.block_b": "Block B, Ground Floor",
+    "location.get_directions": "Get Directions",
 
     // Feedback
     "feedback.title": "How was your last meal?",
@@ -190,6 +193,89 @@ const translations = {
     "admin.edit_menu_item": "Edit Menu Item",
     "admin.update_item": "Update Item",
     "admin.select_category": "Select category",
+    "admin.item_image": "Food Image",
+    "admin.item_description": "Description (Optional)",
+    "admin.loading_menu": "Loading menu items...",
+    "admin.no_items_yet": "No menu items yet. Add your first item!",
+    "admin.error_loading_menu": "Error loading menu",
+    "admin.failed_fetch_menu": "Failed to fetch menu items",
+    "admin.invalid_file_type": "Invalid file type",
+    "admin.please_upload_image": "Please upload an image file",
+    "admin.file_too_large": "File too large",
+    "admin.upload_smaller_image": "Please upload an image smaller than 10MB",
+    "admin.image_uploaded": "Image uploaded successfully ✅",
+    "admin.image_uploaded_desc": "Image has been uploaded to Cloudinary",
+    "admin.error_uploading": "Error uploading image",
+    "admin.failed_upload": "Failed to upload image. Please try again.",
+    "admin.validation_error": "Validation Error ❌",
+    "admin.enter_item_name": "Please enter an item name",
+    "admin.enter_price": "Please enter a price",
+    "admin.enter_valid_price": "Please enter a valid price (greater than 0). Current value:",
+    "admin.select_category_required": "Please select a category",
+    "admin.image_emoji_required": "Image or emoji required",
+    "admin.upload_image_or_emoji": "Please upload an image or add an emoji",
+    "admin.error_adding": "Error adding item ❌",
+    "admin.failed_add_item": "Failed to add menu item. Please check your connection and try again.",
+    "admin.fill_required_fields": "Please fill all required fields (Name, Price, Category)",
+    "admin.invalid_item_id": "Invalid menu item ID",
+    "admin.error_updating_item": "Error updating item ❌",
+    "admin.failed_update_item": "Failed to update menu item",
+    "admin.error_deleting": "Error deleting item ❌",
+    "admin.failed_delete_item": "Failed to delete menu item",
+    "admin.click_upload": "Click to upload",
+    "admin.drag_drop": "or drag and drop",
+    "admin.file_types": "PNG, JPG, GIF up to 10MB",
+    "admin.uploading": "Uploading...",
+    "admin.emoji_optional": "Optional: Add an emoji if no image is uploaded",
+    "admin.emoji_placeholder": "🍔 (optional if image is uploaded)",
+    "admin.description_placeholder": "Brief description of the item",
+    "admin.price_placeholder": "70",
+    "admin.name_placeholder": "e.g., Burger",
+    "admin.translations": "Translations (Optional)",
+    "admin.hindi_name": "Hindi Name",
+    "admin.maithili_name": "Maithili Name",
+    "admin.bhojpuri_name": "Bhojpuri Name",
+    "admin.hindi_placeholder": "e.g., बर्गर",
+    "admin.maithili_placeholder": "e.g., बर्गर",
+    "admin.bhojpuri_placeholder": "e.g., बर्गर",
+    "admin.account_settings": "Account Settings",
+    "admin.manage_profile_security": "Manage your profile and account security",
+    "admin.profile": "Profile",
+    "admin.password": "Password",
+    "admin.profile_image": "Profile Image",
+    "admin.upload_image": "Upload Image",
+    "admin.remove_image": "Remove Image",
+    "admin.name": "Name",
+    "admin.name_placeholder_profile": "Your name",
+    "admin.email": "Email",
+    "admin.email_cannot_change": "Email cannot be changed",
+    "admin.role": "Role",
+    "admin.save_changes": "Save Changes",
+    "admin.saving": "Saving...",
+    "admin.current_password": "Current Password",
+    "admin.new_password": "New Password",
+    "admin.confirm_password": "Confirm New Password",
+    "admin.enter_current_password": "Enter current password",
+    "admin.enter_new_password": "Enter new password (min 6 characters)",
+    "admin.confirm_new_password": "Confirm new password",
+    "admin.change_password": "Change Password",
+    "admin.changing": "Changing...",
+    "admin.all_fields_required": "All password fields are required",
+    "admin.password_min_length": "New password must be at least 6 characters long",
+    "admin.passwords_not_match": "New passwords do not match",
+    "admin.profile_updated": "Profile updated successfully ✅",
+    "admin.profile_updated_desc": "Your profile has been updated",
+    "admin.password_changed": "Password changed successfully ✅",
+    "admin.password_changed_desc": "Your password has been updated",
+    "admin.loading_orders": "Loading orders...",
+    "admin.live": "Live",
+    "admin.offline": "Offline",
+    "admin.error": "Error",
+    "admin.failed_load_profile": "Failed to load profile",
+    "admin.profile_image_uploaded": "Profile image has been uploaded",
+    "admin.name_required": "Name is required",
+    "admin.failed_update_profile": "Failed to update profile",
+    "admin.failed_change_password": "Failed to change password",
 
     // Login
     "login.title": "Welcome to QuickBite 🍽️",
@@ -309,17 +395,33 @@ const translations = {
     "testimonials.title": "What Our Users Say",
     "testimonials.subtitle": "Real feedback from students and admins",
     "testimonial.priya.name": "Priya Sharma",
+    "testimonial.priya.name_hi": "प्रिया शर्मा",
+    "testimonial.priya.name_mai": "प्रिया शर्मा",
+    "testimonial.priya.name_bho": "प्रिया शर्मा",
     "testimonial.priya.role": "Computer Science Student",
     "testimonial.priya.content": "Loved how quick and smooth the process was! No more standing in lines during lunch break.",
     "testimonial.rahul.name": "Rahul Patel",
+    "testimonial.rahul.name_hi": "राहुल पटेल",
+    "testimonial.rahul.name_mai": "राहुल पटेल",
+    "testimonial.rahul.name_bho": "राहुल पटेल",
     "testimonial.rahul.role": "Engineering Student",
     "testimonial.rahul.content": "Perfect for busy students during breaks. I can order between classes and pick up when convenient.",
     "testimonial.anita.name": "Anita Singh",
+    "testimonial.anita.name_hi": "अनीता सिंह",
+    "testimonial.anita.name_mai": "अनीता सिंह",
+    "testimonial.anita.name_bho": "अनीता सिंह",
     "testimonial.anita.role": "MBA Student",
     "testimonial.anita.content": "No more standing in line. Great experience! The notifications are super helpful.",
     "testimonial.admin.name": "Admin Team",
+    "testimonial.admin.name_hi": "एडमिन टीम",
+    "testimonial.admin.name_mai": "एडमिन टीम",
+    "testimonial.admin.name_bho": "एडमिन टीम",
     "testimonial.admin.role": "Canteen Management",
     "testimonial.admin.content": "Easy to manage orders and set realistic preparation times. Students love the transparency!",
+    "testimonial.role.computer_science": "Computer Science Student",
+    "testimonial.role.engineering": "Engineering Student",
+    "testimonial.role.mba": "MBA Student",
+    "testimonial.role.canteen_management": "Canteen Management",
 
     // FAQ
     "faq.title": "Frequently Asked Questions",
@@ -420,6 +522,43 @@ const translations = {
     "common.items": "items",
     "common.item": "item",
     "common.min": "min",
+
+    // Orders
+    "orders.title": "Order History",
+    "orders.subtitle": "View all your past orders",
+    "orders.back_to_menu": "Back to Menu",
+    "orders.menu": "Menu",
+    "orders.items_ordered": "Items Ordered",
+    "orders.total": "Total:",
+    "orders.your_rating": "Your Rating:",
+    "orders.picked_up": "Picked Up",
+    "orders.cancelled": "Cancelled",
+    "orders.no_orders": "No orders yet",
+    "orders.no_orders_desc": "Your order history will appear here once you place your first order",
+    "orders.browse_menu": "Browse Menu",
+    "orders.loading": "Loading orders...",
+
+    // Dashboard Additional
+    "dashboard.most_ordered": "Most Ordered",
+    "dashboard.error_adding_item": "Error adding item",
+    "dashboard.item_id_missing": "Item ID is missing. Please refresh the page.",
+    "dashboard.student": "Student",
+    "dashboard.account": "Account",
+
+    // Cart Additional
+    "cart.back_to_menu": "Back to Menu",
+    "cart.menu": "Menu",
+
+    // Status Additional
+    "status.back_to_menu": "Back to Menu",
+    "status.order": "Order",
+    "status.already_completed": "Order already completed",
+    "status.already_completed_desc": "This order has already been marked as completed.",
+    "status.failed_mark_completed": "Failed to mark order as completed",
+    "status.order_complete_desc": "Order marked as completed! Check your email for rating & review link.",
+    "status.rate_review": "Rate & Review Your Order",
+    "status.share_experience": "Share your experience and help us improve!",
+    "status.phone_number": "+91 98765 43210",
   },
   hi: {
     // Navigation
@@ -444,7 +583,10 @@ const translations = {
 
     // Location
     "location.title": "हमें आसानी से खोजें",
-    "location.address": "ब्लॉक बी, ग्राउंड फ्लोर, कॉलेज कैंपस",
+    "location.address": "कैंटीन, कॉलेज कैंपस",
+    "location.full_address": "WIT, मानसर कॉलोनी, दरभंगा, बिहार 846008",
+    "location.block_b": "ब्लॉक बी, ग्राउंड फ्लोर",
+    "location.get_directions": "दिशा-निर्देश प्राप्त करें",
 
     // Feedback
     "feedback.title": "आपका पिछला खाना कैसा था?",
@@ -598,6 +740,13 @@ const translations = {
     "admin.edit_menu_item": "मेन्यू आइटम संपादित करें",
     "admin.update_item": "आइटम अपडेट करें",
     "admin.select_category": "श्रेणी चुनें",
+    "admin.translations": "अनुवाद (वैकल्पिक)",
+    "admin.hindi_name": "हिंदी नाम",
+    "admin.maithili_name": "मैथिली नाम",
+    "admin.bhojpuri_name": "भोजपुरी नाम",
+    "admin.hindi_placeholder": "उदाहरण: बर्गर",
+    "admin.maithili_placeholder": "उदाहरण: बर्गर",
+    "admin.bhojpuri_placeholder": "उदाहरण: बर्गर",
 
     // Login
     "login.title": "क्विकबाइट में आपका स्वागत है 🍽️",
@@ -764,18 +913,22 @@ const translations = {
     // Testimonials
     "testimonials.title": "हमारे उपयोगकर्ता क्या कहते हैं",
     "testimonials.subtitle": "छात्रों और एडमिन से वास्तविक फीडबैक",
-    "testimonial.priya.name": "Priya Sharma",
-    "testimonial.priya.role": "Computer Science Student",
+    "testimonial.priya.name": "प्रिया शर्मा",
+    "testimonial.priya.role": "कंप्यूटर साइंस छात्र",
     "testimonial.priya.content": "प्रक्रिया कितनी तेज़ और सुचारू थी, यह पसंद आया! अब लंच ब्रेक के दौरान लाइन में खड़े होने की जरूरत नहीं।",
-    "testimonial.rahul.name": "Rahul Patel",
-    "testimonial.rahul.role": "Engineering Student",
+    "testimonial.rahul.name": "राहुल पटेल",
+    "testimonial.rahul.role": "इंजीनियरिंग छात्र",
     "testimonial.rahul.content": "ब्रेक के दौरान व्यस्त छात्रों के लिए बिल्कुल सही। मैं कक्षाओं के बीच ऑर्डर कर सकता हूँ और सुविधाजनक समय पर ले सकता हूँ।",
-    "testimonial.anita.name": "Anita Singh",
-    "testimonial.anita.role": "MBA Student",
+    "testimonial.anita.name": "अनीता सिंह",
+    "testimonial.anita.role": "MBA छात्र",
     "testimonial.anita.content": "अब लाइन में खड़े होने की जरूरत नहीं। बेहतरीन अनुभव! सूचनाएं बहुत मददगार हैं।",
-    "testimonial.admin.name": "Admin Team",
-    "testimonial.admin.role": "Canteen Management",
+    "testimonial.admin.name": "एडमिन टीम",
+    "testimonial.admin.role": "कैंटीन प्रबंधन",
     "testimonial.admin.content": "ऑर्डर प्रबंधित करना और यथार्थवादी तैयारी समय निर्धारित करना आसान है। छात्रों को पारदर्शिता पसंद है!",
+    "testimonial.role.computer_science": "कंप्यूटर साइंस छात्र",
+    "testimonial.role.engineering": "इंजीनियरिंग छात्र",
+    "testimonial.role.mba": "MBA छात्र",
+    "testimonial.role.canteen_management": "कैंटीन प्रबंधन",
 
     // FAQ
     "faq.title": "अक्सर पूछे जाने वाले प्रश्न",
@@ -832,6 +985,43 @@ const translations = {
     "common.items": "आइटम",
     "common.item": "आइटम",
     "common.min": "मिन",
+
+    // Orders
+    "orders.title": "ऑर्डर इतिहास",
+    "orders.subtitle": "अपने सभी पिछले ऑर्डर देखें",
+    "orders.back_to_menu": "मेन्यू पर वापस",
+    "orders.menu": "मेन्यू",
+    "orders.items_ordered": "ऑर्डर आइटम",
+    "orders.total": "कुल:",
+    "orders.your_rating": "आपकी रेटिंग:",
+    "orders.picked_up": "पिक किया गया",
+    "orders.cancelled": "रद्द",
+    "orders.no_orders": "अभी तक कोई ऑर्डर नहीं",
+    "orders.no_orders_desc": "आपका ऑर्डर इतिहास यहाँ दिखाई देगा जब आप अपना पहला ऑर्डर देंगे",
+    "orders.browse_menu": "मेन्यू देखें",
+    "orders.loading": "ऑर्डर लोड हो रहे हैं...",
+
+    // Dashboard Additional
+    "dashboard.most_ordered": "सबसे ज्यादा ऑर्डर",
+    "dashboard.error_adding_item": "आइटम जोड़ने में त्रुटि",
+    "dashboard.item_id_missing": "आइटम आईडी गायब है। कृपया पृष्ठ को रीफ्रेश करें।",
+    "dashboard.student": "छात्र",
+    "dashboard.account": "खाता",
+
+    // Cart Additional
+    "cart.back_to_menu": "मेन्यू पर वापस",
+    "cart.menu": "मेन्यू",
+
+    // Status Additional
+    "status.back_to_menu": "मेन्यू पर वापस",
+    "status.order": "ऑर्डर",
+    "status.already_completed": "ऑर्डर पहले से पूरा हो चुका है",
+    "status.already_completed_desc": "यह ऑर्डर पहले से ही पूरा हो चुका है।",
+    "status.failed_mark_completed": "ऑर्डर को पूरा मार्क करने में विफल",
+    "status.order_complete_desc": "ऑर्डर पूरा हो गया! रेटिंग और समीक्षा लिंक के लिए अपना ईमेल देखें।",
+    "status.rate_review": "अपने ऑर्डर को रेट और समीक्षा करें",
+    "status.share_experience": "अपना अनुभव साझा करें और हमें सुधारने में मदद करें!",
+    "status.phone_number": "+91 98765 43210",
   },
   mai: {
     // Navigation
@@ -856,7 +1046,10 @@ const translations = {
 
     // Location
     "location.title": "हमरा आसानी सँ खोजू",
-    "location.address": "ब्लॉक बी, ग्राउंड फ्लोर, कॉलेज कैंपस",
+    "location.address": "कैंटीन, कॉलेज कैंपस",
+    "location.full_address": "WIT, मानसर कॉलोनी, दरभंगा, बिहार 846008",
+    "location.block_b": "ब्लॉक बी, ग्राउंड फ्लोर",
+    "location.get_directions": "दिशा-निर्देश लेल जाउ",
 
     // Feedback
     "feedback.title": "अहाँक पछिला खाना कहन छल?",
@@ -1010,6 +1203,13 @@ const translations = {
     "admin.edit_menu_item": "मेन्यू आइटम संपादित करू",
     "admin.update_item": "आइटम अपडेट करू",
     "admin.select_category": "श्रेणी चुनू",
+    "admin.translations": "अनुवाद (वैकल्पिक)",
+    "admin.hindi_name": "हिंदी नाम",
+    "admin.maithili_name": "मैथिली नाम",
+    "admin.bhojpuri_name": "भोजपुरी नाम",
+    "admin.hindi_placeholder": "उदाहरण: बर्गर",
+    "admin.maithili_placeholder": "उदाहरण: बर्गर",
+    "admin.bhojpuri_placeholder": "उदाहरण: बर्गर",
 
     // Login
     "login.title": "क्विकबाइट मे अहाँक स्वागत अछि 🍽️",
@@ -1128,18 +1328,34 @@ const translations = {
     // Testimonials
     "testimonials.title": "हमर उपयोगकर्ता की कहैत छथि",
     "testimonials.subtitle": "छात्र सभ आ एडमिन सँ वास्तविक फीडबैक",
-    "testimonial.priya.name": "Priya Sharma",
-    "testimonial.priya.role": "Computer Science Student",
+    "testimonial.priya.name": "प्रिया शर्मा",
+    "testimonial.priya.name_hi": "प्रिया शर्मा",
+    "testimonial.priya.name_mai": "प्रिया शर्मा",
+    "testimonial.priya.name_bho": "प्रिया शर्मा",
+    "testimonial.priya.role": "कंप्यूटर साइंस छात्र",
     "testimonial.priya.content": "प्रक्रिया कतना तेज़ आ सुचारू छल, ई पसंद आएल! अब लंच ब्रेक के दौरान लाइन में खड़ा होए के जरूरत नहि।",
-    "testimonial.rahul.name": "Rahul Patel",
-    "testimonial.rahul.role": "Engineering Student",
+    "testimonial.rahul.name": "राहुल पटेल",
+    "testimonial.rahul.name_hi": "राहुल पटेल",
+    "testimonial.rahul.name_mai": "राहुल पटेल",
+    "testimonial.rahul.name_bho": "राहुल पटेल",
+    "testimonial.rahul.role": "इंजीनियरिंग छात्र",
     "testimonial.rahul.content": "ब्रेक के दौरान व्यस्त छात्र सभक लेल बिल्कुल सही। हम कक्षा सभक बीच ऑर्डर कर सकैत छी आ सुविधाजनक समय पर ले सकैत छी।",
-    "testimonial.anita.name": "Anita Singh",
-    "testimonial.anita.role": "MBA Student",
+    "testimonial.anita.name": "अनीता सिंह",
+    "testimonial.anita.name_hi": "अनीता सिंह",
+    "testimonial.anita.name_mai": "अनीता सिंह",
+    "testimonial.anita.name_bho": "अनीता सिंह",
+    "testimonial.anita.role": "MBA छात्र",
     "testimonial.anita.content": "अब लाइन में खड़ा होए के जरूरत नहि। बेहतरीन अनुभव! सूचना सभ बहुत मददगार छथि।",
-    "testimonial.admin.name": "Admin Team",
-    "testimonial.admin.role": "Canteen Management",
+    "testimonial.admin.name": "एडमिन टीम",
+    "testimonial.admin.name_hi": "एडमिन टीम",
+    "testimonial.admin.name_mai": "एडमिन टीम",
+    "testimonial.admin.name_bho": "एडमिन टीम",
+    "testimonial.admin.role": "कैंटीन प्रबंधन",
     "testimonial.admin.content": "ऑर्डर प्रबंधित करबा आ यथार्थवादी तैयारी समय निर्धारित करबा आसान अछि। छात्र सभक पारदर्शिता पसंद अछि!",
+    "testimonial.role.computer_science": "कंप्यूटर साइंस छात्र",
+    "testimonial.role.engineering": "इंजीनियरिंग छात्र",
+    "testimonial.role.mba": "MBA छात्र",
+    "testimonial.role.canteen_management": "कैंटीन प्रबंधन",
 
     // FAQ
     "faq.title": "अक्सर पूछल जाए वाला प्रश्न",
@@ -1240,6 +1456,43 @@ const translations = {
     "common.items": "आइटम",
     "common.item": "आइटम",
     "common.min": "मिन",
+
+    // Orders
+    "orders.title": "ऑर्डर इतिहास",
+    "orders.subtitle": "अपन सभ पिछला ऑर्डर देखू",
+    "orders.back_to_menu": "मेन्यू पर वापस",
+    "orders.menu": "मेन्यू",
+    "orders.items_ordered": "ऑर्डर आइटम",
+    "orders.total": "कुल:",
+    "orders.your_rating": "अहाँक रेटिंग:",
+    "orders.picked_up": "पिक कएल गेल",
+    "orders.cancelled": "रद्द",
+    "orders.no_orders": "अखन तक कोनो ऑर्डर नहि",
+    "orders.no_orders_desc": "अहाँक ऑर्डर इतिहास एतय देखाइत जखन अहाँ अपन पहिला ऑर्डर देब",
+    "orders.browse_menu": "मेन्यू देखू",
+    "orders.loading": "ऑर्डर लोड हो रहल अछि...",
+
+    // Dashboard Additional
+    "dashboard.most_ordered": "सबसँ ज्यादा ऑर्डर",
+    "dashboard.error_adding_item": "आइटम जोड़बाक मे त्रुटि",
+    "dashboard.item_id_missing": "आइटम आईडी गायब अछि। कृपया पृष्ठ कऽ रीफ्रेश करू।",
+    "dashboard.student": "छात्र",
+    "dashboard.account": "खाता",
+
+    // Cart Additional
+    "cart.back_to_menu": "मेन्यू पर वापस",
+    "cart.menu": "मेन्यू",
+
+    // Status Additional
+    "status.back_to_menu": "मेन्यू पर वापस",
+    "status.order": "ऑर्डर",
+    "status.already_completed": "ऑर्डर पहिने सँ पूरा भऽ गेल अछि",
+    "status.already_completed_desc": "ई ऑर्डर पहिने सँ पूरा भऽ गेल अछि।",
+    "status.failed_mark_completed": "ऑर्डर कऽ पूरा मार्क करबाक मे विफल",
+    "status.order_complete_desc": "ऑर्डर पूरा भऽ गेल! रेटिंग आ समीक्षा लिंकक लेल अपन ईमेल देखू।",
+    "status.rate_review": "अपन ऑर्डर कऽ रेट आ समीक्षा करू",
+    "status.share_experience": "अपन अनुभव साझा करू आ हमरा सुधारै मे मदद करू!",
+    "status.phone_number": "+91 98765 43210",
   },
   bho: {
     // Navigation
@@ -1264,7 +1517,10 @@ const translations = {
 
     // Location
     "location.title": "हमनी के आसानी से खोजीं",
-    "location.address": "ब्लॉक बी, ग्राउंड फ्लोर, कॉलेज कैंपस",
+    "location.address": "कैंटीन, कॉलेज कैंपस",
+    "location.full_address": "WIT, मानसर कॉलोनी, दरभंगा, बिहार 846008",
+    "location.block_b": "ब्लॉक बी, ग्राउंड फ्लोर",
+    "location.get_directions": "दिशा-निर्देश लेल जाईं",
 
     // Feedback
     "feedback.title": "राउर पिछला खाना कइसन रहल?",
@@ -1418,6 +1674,13 @@ const translations = {
     "admin.edit_menu_item": "मेन्यू आइटम संपादित करीं",
     "admin.update_item": "आइटम अपडेट करीं",
     "admin.select_category": "श्रेणी चुनीं",
+    "admin.translations": "अनुवाद (वैकल्पिक)",
+    "admin.hindi_name": "हिंदी नाम",
+    "admin.maithili_name": "मैथिली नाम",
+    "admin.bhojpuri_name": "भोजपुरी नाम",
+    "admin.hindi_placeholder": "उदाहरण: बर्गर",
+    "admin.maithili_placeholder": "उदाहरण: बर्गर",
+    "admin.bhojpuri_placeholder": "उदाहरण: बर्गर",
 
     // Login
     "login.title": "क्विकबाइट में राउर स्वागत बा 🍽️",
@@ -1536,18 +1799,22 @@ const translations = {
     // Testimonials
     "testimonials.title": "हमार उपयोगकर्ता का कहेला",
     "testimonials.subtitle": "छात्र लोग आ एडमिन से वास्तविक फीडबैक",
-    "testimonial.priya.name": "Priya Sharma",
-    "testimonial.priya.role": "Computer Science Student",
+    "testimonial.priya.name": "प्रिया शर्मा",
+    "testimonial.priya.role": "कंप्यूटर साइंस छात्र",
     "testimonial.priya.content": "प्रक्रिया कतना तेज़ आ सुचारू रहल, ई पसंद आइल! अब लंच ब्रेक के दौरान लाइन में खड़ा होए के जरूरत नइखे।",
-    "testimonial.rahul.name": "Rahul Patel",
-    "testimonial.rahul.role": "Engineering Student",
+    "testimonial.rahul.name": "राहुल पटेल",
+    "testimonial.rahul.role": "इंजीनियरिंग छात्र",
     "testimonial.rahul.content": "ब्रेक के दौरान व्यस्त छात्र लोग के खातिर बिल्कुल सही। हम कक्षा लोग के बीच ऑर्डर कर सकेला आ सुविधाजनक समय पर ले सकेला।",
-    "testimonial.anita.name": "Anita Singh",
-    "testimonial.anita.role": "MBA Student",
+    "testimonial.anita.name": "अनीता सिंह",
+    "testimonial.anita.role": "MBA छात्र",
     "testimonial.anita.content": "अब लाइन में खड़ा होए के जरूरत नइखे। बेहतरीन अनुभव! सूचना लोग बहुत मददगार बा।",
-    "testimonial.admin.name": "Admin Team",
-    "testimonial.admin.role": "Canteen Management",
+    "testimonial.admin.name": "एडमिन टीम",
+    "testimonial.admin.role": "कैंटीन प्रबंधन",
     "testimonial.admin.content": "ऑर्डर प्रबंधित करेला आ यथार्थवादी तैयारी समय निर्धारित करेला आसान बा। छात्र लोग के पारदर्शिता पसंद बा!",
+    "testimonial.role.computer_science": "कंप्यूटर साइंस छात्र",
+    "testimonial.role.engineering": "इंजीनियरिंग छात्र",
+    "testimonial.role.mba": "MBA छात्र",
+    "testimonial.role.canteen_management": "कैंटीन प्रबंधन",
 
     // FAQ
     "faq.title": "अक्सर पूछल जाए वाला प्रश्न",
@@ -1648,6 +1915,43 @@ const translations = {
     "common.items": "आइटम",
     "common.item": "आइटम",
     "common.min": "मिन",
+
+    // Orders
+    "orders.title": "ऑर्डर इतिहास",
+    "orders.subtitle": "अपना सभ पिछला ऑर्डर देखीं",
+    "orders.back_to_menu": "मेन्यू पर वापस",
+    "orders.menu": "मेन्यू",
+    "orders.items_ordered": "ऑर्डर आइटम",
+    "orders.total": "कुल:",
+    "orders.your_rating": "राउर रेटिंग:",
+    "orders.picked_up": "पिक कइल गइल",
+    "orders.cancelled": "रद्द",
+    "orders.no_orders": "अभी तक कवनो ऑर्डर नइखे",
+    "orders.no_orders_desc": "राउर ऑर्डर इतिहास इहाँ देखाई जखन रउआ अपना पहिला ऑर्डर देखीं",
+    "orders.browse_menu": "मेन्यू देखीं",
+    "orders.loading": "ऑर्डर लोड हो रहल बा...",
+
+    // Dashboard Additional
+    "dashboard.most_ordered": "सबसे ज्यादा ऑर्डर",
+    "dashboard.error_adding_item": "आइटम जोड़े में त्रुटि",
+    "dashboard.item_id_missing": "आइटम आईडी गायब बा। कृपया पृष्ठ के रीफ्रेश करीं।",
+    "dashboard.student": "छात्र",
+    "dashboard.account": "खाता",
+
+    // Cart Additional
+    "cart.back_to_menu": "मेन्यू पर वापस",
+    "cart.menu": "मेन्यू",
+
+    // Status Additional
+    "status.back_to_menu": "मेन्यू पर वापस",
+    "status.order": "ऑर्डर",
+    "status.already_completed": "ऑर्डर पहिले से पूरा हो गइल बा",
+    "status.already_completed_desc": "ई ऑर्डर पहिले से पूरा हो गइल बा।",
+    "status.failed_mark_completed": "ऑर्डर के पूरा मार्क करे में विफल",
+    "status.order_complete_desc": "ऑर्डर पूरा हो गइल! रेटिंग आ समीक्षा लिंक खातिर अपना ईमेल देखीं।",
+    "status.rate_review": "अपना ऑर्डर के रेट आ समीक्षा करीं",
+    "status.share_experience": "अपना अनुभव साझा करीं आ हमरा सुधारे में मदद करीं!",
+    "status.phone_number": "+91 98765 43210",
   },
 }
 
@@ -1671,7 +1975,22 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     return translations[language][key as keyof (typeof translations)[Language]] || key
   }
 
-  return <LanguageContext.Provider value={{ language, setLanguage, t }}>{children}</LanguageContext.Provider>
+  // Helper function to get translated menu item name
+  const getTranslatedName = (item: { name: { en: string; hi?: string; mai?: string; bho?: string } | string }): string => {
+    // Handle both old format (string) and new format (object)
+    if (typeof item.name === 'string') {
+      return item.name // Fallback for old data format
+    }
+    
+    // New format: name is an object with language keys
+    const nameObj = item.name
+    if (language === "hi" && nameObj.hi) return nameObj.hi
+    if (language === "mai" && nameObj.mai) return nameObj.mai
+    if (language === "bho" && nameObj.bho) return nameObj.bho
+    return nameObj.en // Default to English
+  }
+
+  return <LanguageContext.Provider value={{ language, setLanguage, t, getTranslatedName }}>{children}</LanguageContext.Provider>
 }
 
 export function useLanguage() {

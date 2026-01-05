@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
-import { Clock, CheckCircle, ChefHat, Bell, ArrowLeft, MapPin, Phone, Star, Home } from "lucide-react"
+import { Clock, CheckCircle, ChefHat, Bell, ArrowLeft, MapPin, Phone, Star } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
@@ -15,7 +15,7 @@ import { useLanguage } from "@/contexts/language-context"
 
 interface Order {
   orderId: string
-  items: Array<{ name: string; quantity: number; price: number }>
+  items: Array<{ menuItemId: string; name: string; quantity: number; price: number }>
   totalAmount: number
   status: "pending" | "accepted" | "preparing" | "ready" | "completed" | "cancelled"
   estimatedTime?: number
@@ -35,7 +35,7 @@ export default function OrderStatusPage() {
   const { user, isAuthenticated } = useAuth()
   const orderId = searchParams.get("orderId")
   const { notifications, isConnected } = useSocket('customer', user?.id)
-  const { t } = useLanguage()
+  const { t, getTranslatedName, language } = useLanguage()
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -161,24 +161,24 @@ export default function OrderStatusPage() {
   const markAsPickedUp = async () => {
     if (!orderId) return
 
-    // Prevent duplicate submissions
-    if (status === 'completed') {
-      toast({
-        title: "Order already completed",
-        description: "This order has already been marked as completed.",
-      })
-      return
-    }
+      // Prevent duplicate submissions
+      if (status === 'completed') {
+        toast({
+          title: t("status.already_completed") || "Order already completed",
+          description: t("status.already_completed_desc") || "This order has already been marked as completed.",
+        })
+        return
+      }
 
-    // Double check the order status before submitting
-    if (order?.status === 'completed') {
-      setStatus("completed")
-      toast({
-        title: "Order already completed",
-        description: "This order has already been marked as completed.",
-      })
-      return
-    }
+      // Double check the order status before submitting
+      if (order?.status === 'completed') {
+        setStatus("completed")
+        toast({
+          title: t("status.already_completed") || "Order already completed",
+          description: t("status.already_completed_desc") || "This order has already been marked as completed.",
+        })
+        return
+      }
 
     try {
       const response = await fetch(`/api/orders/${orderId}/complete`, {
@@ -199,13 +199,13 @@ export default function OrderStatusPage() {
           }
           
           toast({
-            title: "Order already completed",
-            description: "This order has already been marked as completed.",
+            title: t("status.already_completed") || "Order already completed",
+            description: t("status.already_completed_desc") || "This order has already been marked as completed.",
           })
           return
         }
         
-        throw new Error(errorData.error || 'Failed to mark order as completed')
+        throw new Error(errorData.error || t("status.failed_mark_completed") || 'Failed to mark order as completed')
       }
 
       const data = await response.json()
@@ -214,7 +214,7 @@ export default function OrderStatusPage() {
       
       toast({
         title: `✅ ${t("status.order_complete")}`,
-        description: "Order marked as completed! Check your email for rating & review link.",
+        description: t("status.order_complete_desc") || "Order marked as completed! Check your email for rating & review link.",
       })
       
       // Redirect to review page after a short delay
@@ -224,8 +224,8 @@ export default function OrderStatusPage() {
     } catch (error: any) {
       console.error('Error marking order as completed:', error)
       toast({
-        title: "Error",
-        description: error.message || "Failed to mark order as completed",
+        title: t("status.error") || "Error",
+        description: error.message || t("status.failed_mark_completed") || "Failed to mark order as completed",
         variant: "destructive",
       })
     }
@@ -270,40 +270,35 @@ export default function OrderStatusPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-white dark:from-gray-900 dark:to-gray-800">
+    <div className="min-h-screen bg-gradient-to-br from-gray-100 via-gray-50 to-white dark:from-gray-950 dark:via-gray-900 dark:to-gray-800">
       {/* Header */}
-      <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-4xl mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
+      <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 sticky top-0 z-40">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-20 sm:h-24 gap-4">
+            {/* Left Side - Back Button and Title */}
+            <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
               <Link href="/student/dashboard">
                 <Button
-                  variant="ghost"
-                  className="rounded-full p-3 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  variant="outline"
+                  size="sm"
+                  className="border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:border-emerald-300 dark:hover:border-emerald-700 transition-all duration-300 hover:scale-105 shadow-sm hover:shadow-md h-9 sm:h-10 px-3 sm:px-4 flex-shrink-0"
                 >
-                  <ArrowLeft className="w-5 h-5" />
+                  <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2 flex-shrink-0" />
+                  <span className="hidden sm:inline whitespace-nowrap">{t("status.back_to_menu") || "Back to Menu"}</span>
+                  <span className="sm:hidden whitespace-nowrap">{t("orders.menu") || "Menu"}</span>
                 </Button>
               </Link>
-              <div>
-                <h1 className="text-3xl font-bold text-gray-800 dark:text-white">{t("status.title")}</h1>
-                <p className="text-gray-600 dark:text-gray-300">{t("status.subtitle")}</p>
+              <div className="min-w-0 flex-1">
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 dark:text-white truncate leading-tight">{t("status.title")}</h1>
+                <p className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm truncate mt-0.5">{t("status.subtitle")}</p>
               </div>
             </div>
-            <div className="flex items-center space-x-3">
-              {(status === "pending" || status === "accepted" || status === "preparing" || status === "ready") && (
-                <Link href="/">
-                  <Button
-                    variant="outline"
-                    className="border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:border-emerald-300 dark:hover:border-emerald-700 transition-all duration-300 hover:scale-105 shadow-sm hover:shadow-md"
-                  >
-                    <Home className="w-5 h-5 mr-2" />
-                    {t("login.back_home")}
-                  </Button>
-                </Link>
-              )}
-              <div className="text-right">
-                <div className="text-4xl mb-2">{getStatusIcon()}</div>
-                <Badge className={`bg-gradient-to-r ${getStatusColor()} text-white border-0`}>
+            
+            {/* Right Side - Status Icon and Badge */}
+            <div className="flex items-center justify-end gap-3 flex-shrink-0">
+              <div className="flex flex-col items-end gap-2">
+                <div className="text-3xl sm:text-4xl leading-none">{getStatusIcon()}</div>
+                <Badge className={`bg-gradient-to-r ${getStatusColor()} text-white border-0 text-xs sm:text-sm font-semibold px-2.5 py-1 shadow-md`}>
                   {status.charAt(0).toUpperCase() + status.slice(1)}
                 </Badge>
               </div>
@@ -312,7 +307,7 @@ export default function OrderStatusPage() {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Main Status Card */}
           <div className="lg:col-span-2">
@@ -320,7 +315,7 @@ export default function OrderStatusPage() {
               <CardHeader className={`bg-gradient-to-r ${getStatusColor()} text-white p-8`}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-2xl font-bold mb-2">Order {orderId}</CardTitle>
+                    <CardTitle className="text-2xl font-bold mb-2">{t("status.order") || "Order"} {orderId}</CardTitle>
                     <p className="text-white/90">{t("status.placed_by")} {user?.name || t("cart.student")}</p>
                   </div>
                   <div className="text-6xl animate-pulse">{getStatusIcon()}</div>
@@ -465,10 +460,10 @@ export default function OrderStatusPage() {
                       {/* Review Section */}
                       <div className="bg-emerald-50 dark:bg-emerald-900 rounded-2xl p-6">
                         <h4 className="font-semibold text-emerald-800 dark:text-emerald-200 mb-4">
-                          Rate & Review Your Order ⭐
+                          {t("status.rate_review") || "Rate & Review Your Order"} ⭐
                         </h4>
                         <p className="text-sm text-emerald-700 dark:text-emerald-300 mb-4">
-                          Share your experience and help us improve!
+                          {t("status.share_experience") || "Share your experience and help us improve!"}
                         </p>
                         {order?.items && (
                           <div className="space-y-3">
@@ -481,7 +476,7 @@ export default function OrderStatusPage() {
                                   variant="outline"
                                   className="w-full justify-between bg-white dark:bg-gray-800 hover:bg-emerald-100 dark:hover:bg-emerald-800"
                                 >
-                                  <span className="font-medium">{item.name}</span>
+                                  <span className="font-medium">{getTranslatedName(item)}</span>
                                   <Star className="w-4 h-4 ml-2 text-yellow-400" />
                                 </Button>
                               </Link>
@@ -537,7 +532,7 @@ export default function OrderStatusPage() {
                     <Phone className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                     <div>
                       <p className="font-medium text-gray-800 dark:text-white">{t("status.call_canteen")}</p>
-                      <p className="text-sm text-gray-600 dark:text-gray-300">+91 98765 43210</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-300">{t("status.phone_number") || "+91 98765 43210"}</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-3">

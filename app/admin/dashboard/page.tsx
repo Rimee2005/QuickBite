@@ -295,7 +295,7 @@ export default function AdminDashboard() {
         {/* Loading State */}
         {loading && (
           <div className="text-center py-12">
-            <p className="text-gray-600 dark:text-gray-300">Loading orders...</p>
+            <p className="text-gray-600 dark:text-gray-300">{t("admin.loading_orders") || "Loading orders..."}</p>
           </div>
         )}
 

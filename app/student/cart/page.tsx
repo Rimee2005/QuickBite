@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
-import { Trash2, Plus, Minus, ArrowLeft, ShoppingBag, CreditCard, Clock, Home } from "lucide-react"
+import { Trash2, Plus, Minus, ArrowLeft, ShoppingBag, CreditCard, Clock } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
@@ -20,7 +20,7 @@ export default function CartPage() {
   const { items, updateQuantity, removeItem, clearCart, getTotalPrice } = useCart()
   const [isPlacingOrder, setIsPlacingOrder] = useState(false)
   const { emitNewOrder, isConnected } = useSocket('customer', user?.id)
-  const { t } = useLanguage()
+  const { t, getTranslatedName, language } = useLanguage()
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -56,9 +56,13 @@ export default function CartPage() {
         if (!item.id) {
           throw new Error(`Cart item ${index + 1} is missing an ID. Please remove and re-add the item.`)
         }
+        // Pass the full name object to preserve all language translations
+        const nameObj = typeof item.name === 'string' 
+          ? { en: item.name } 
+          : item.name
         return {
           menuItemId: String(item.id),
-          name: item.name,
+          name: nameObj, // Pass full name object
           quantity: item.quantity,
           price: item.price,
         }
@@ -161,42 +165,36 @@ export default function CartPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-white dark:from-gray-900 dark:to-gray-800">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-gray-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       {/* Header */}
-      <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
-          <div className="flex items-center justify-between gap-3 sm:gap-4">
-            <div className="flex items-center space-x-2 sm:space-x-4 flex-1 min-w-0">
+      <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 sticky top-0 z-40">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16 sm:h-20 gap-4">
+            {/* Left Side - Your Cart Title */}
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 dark:text-white truncate leading-tight">{t("cart.title")}</h1>
+              <p className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm truncate mt-0.5">
+                {items.length} {items.length !== 1 ? t("cart.items_count_plural") : t("cart.items_count")} • {user?.name || t("cart.student")}
+              </p>
+            </div>
+            
+            {/* Right Side - Back to Menu Button and Cart Icon */}
+            <div className="flex items-center gap-2.5 sm:gap-3 flex-shrink-0">
               <Link href="/student/dashboard">
                 <Button
-                  variant="ghost"
-                  className="rounded-full p-2 sm:p-3 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0"
-                >
-                  <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-                </Button>
-              </Link>
-              <div className="min-w-0 flex-1">
-                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 dark:text-white truncate">{t("cart.title")}</h1>
-                <p className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm truncate">
-                  {items.length} {items.length !== 1 ? t("cart.items_count_plural") : t("cart.items_count")} • {user?.name || t("cart.student")}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-2 sm:space-x-3">
-              <Link href="/">
-                <Button
                   variant="outline"
-                  className="border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:border-emerald-300 dark:hover:border-emerald-700 transition-all duration-300 hover:scale-105 shadow-sm hover:shadow-md px-3 sm:px-4"
+                  size="sm"
+                  className="border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:border-emerald-300 dark:hover:border-emerald-700 transition-all duration-300 hover:scale-105 shadow-sm hover:shadow-md h-9 sm:h-10 px-3 sm:px-4"
                 >
-                  <Home className="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2" />
-                  <span className="hidden sm:inline">{t("login.back_home")}</span>
-                  <span className="sm:hidden">Home</span>
+                  <ArrowLeft className="w-4 h-4 mr-1.5 sm:mr-2 flex-shrink-0" />
+                  <span className="hidden sm:inline whitespace-nowrap">{t("cart.back_to_menu") || "Back to Menu"}</span>
+                  <span className="sm:hidden whitespace-nowrap">{t("cart.menu") || "Menu"}</span>
                 </Button>
               </Link>
-              <div className="text-right flex-shrink-0">
-                <div className="text-2xl sm:text-3xl">🛒</div>
-                <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200 mt-1 text-xs">
-                  {items.reduce((total, item) => total + item.quantity, 0)} {t("common.items")}
+              <div className="relative flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12">
+                <div className="text-2xl sm:text-3xl leading-none">🛒</div>
+                <Badge className="absolute -top-1 -right-1 sm:-top-1.5 sm:-right-1.5 bg-emerald-500 text-white dark:bg-emerald-600 dark:text-white text-xs font-bold px-1.5 py-0.5 min-w-[1.25rem] h-5 flex items-center justify-center rounded-full shadow-md border-2 border-white dark:border-gray-800">
+                  {items.reduce((total, item) => total + item.quantity, 0)}
                 </Badge>
               </div>
             </div>
@@ -204,7 +202,7 @@ export default function CartPage() {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         <div className="grid lg:grid-cols-3 gap-6 sm:gap-8">
           {/* Cart Items */}
           <div className="lg:col-span-2 space-y-3 sm:space-y-4">
@@ -231,7 +229,7 @@ export default function CartPage() {
                       <div className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 bg-gradient-to-br from-emerald-100 to-emerald-200 dark:from-emerald-900 dark:to-emerald-800 rounded-xl sm:rounded-2xl flex items-center justify-center text-2xl sm:text-3xl shadow-inner flex-shrink-0">
                         {item.emoji || item.image ? (
                           item.image ? (
-                            <img src={item.image} alt={item.name} className="w-full h-full object-cover rounded-xl sm:rounded-2xl" />
+                            <img src={item.image} alt={getTranslatedName(item)} className="w-full h-full object-cover rounded-xl sm:rounded-2xl" />
                           ) : (
                             <span>{item.emoji}</span>
                           )
@@ -240,10 +238,10 @@ export default function CartPage() {
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <h3 className="font-bold text-base sm:text-lg text-gray-800 dark:text-white truncate">{item.name}</h3>
+                        <h3 className="font-bold text-base sm:text-lg text-gray-800 dark:text-white truncate">{getTranslatedName(item)}</h3>
                         <p className="text-emerald-600 dark:text-emerald-400 font-bold text-lg sm:text-xl">₹{item.price}</p>
                         <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm">
-                          Subtotal: ₹{item.price * item.quantity}
+                          {t("cart.subtotal_label") || "Subtotal:"} ₹{item.price * item.quantity}
                         </p>
                       </div>
                     </div>
@@ -281,7 +279,7 @@ export default function CartPage() {
                           removeItem(item.id)
                           toast({
                             title: `${t("cart.item_removed")} 🗑️`,
-                            description: `${item.name} ${t("cart.removed_desc")}`,
+                            description: `${getTranslatedName(item)} ${t("cart.removed_desc")}`,
                           })
                         }}
                       >
@@ -311,7 +309,7 @@ export default function CartPage() {
                     {items.map((item, index) => (
                       <div key={item.id || `order-item-${index}`} className="flex justify-between text-xs sm:text-sm">
                         <span className="text-gray-600 dark:text-gray-300 truncate pr-2">
-                          {item.quantity}x {item.name}
+                          {item.quantity}x {getTranslatedName(item)}
                         </span>
                         <span className="font-medium text-gray-800 dark:text-white flex-shrink-0">₹{item.price * item.quantity}</span>
                       </div>

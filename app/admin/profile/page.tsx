@@ -10,6 +10,7 @@ import { ArrowLeft, User, Camera, Lock, Save, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
+import { useLanguage } from "@/contexts/language-context"
 import Image from "next/image"
 
 interface Profile {
@@ -41,6 +42,7 @@ export default function AdminProfilePage() {
   const { toast } = useToast()
   const router = useRouter()
   const { user } = useAuth()
+  const { t } = useLanguage()
 
   useEffect(() => {
     fetchProfile()
@@ -60,8 +62,8 @@ export default function AdminProfilePage() {
       })
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.message || "Failed to load profile",
+        title: t("admin.error") || "Error",
+        description: error.message || t("admin.failed_load_profile") || "Failed to load profile",
         variant: "destructive",
       })
     } finally {
@@ -75,8 +77,8 @@ export default function AdminProfilePage() {
 
     if (!file.type.startsWith("image/")) {
       toast({
-        title: "Invalid file type",
-        description: "Please upload an image file",
+        title: t("admin.invalid_file_type") || "Invalid file type",
+        description: t("admin.please_upload_image") || "Please upload an image file",
         variant: "destructive",
       })
       return
@@ -84,8 +86,8 @@ export default function AdminProfilePage() {
 
     if (file.size > 5 * 1024 * 1024) {
       toast({
-        title: "File too large",
-        description: "Please upload an image smaller than 5MB",
+        title: t("admin.file_too_large") || "File too large",
+        description: t("admin.upload_smaller_image") || "Please upload an image smaller than 5MB",
         variant: "destructive",
       })
       return
@@ -112,13 +114,13 @@ export default function AdminProfilePage() {
       setFormData((prev) => ({ ...prev, profileImage: data.url }))
 
       toast({
-        title: "Image uploaded successfully ✅",
-        description: "Profile image has been uploaded",
+        title: t("admin.image_uploaded") || "Image uploaded successfully ✅",
+        description: t("admin.profile_image_uploaded") || "Profile image has been uploaded",
       })
     } catch (error: any) {
       toast({
-        title: "Error uploading image",
-        description: error.message || "Failed to upload image",
+        title: t("admin.error_uploading") || "Error uploading image",
+        description: error.message || t("admin.failed_upload") || "Failed to upload image",
         variant: "destructive",
       })
     } finally {
@@ -129,8 +131,8 @@ export default function AdminProfilePage() {
   const handleUpdateProfile = async () => {
     if (!formData.name.trim()) {
       toast({
-        title: "Validation Error",
-        description: "Name is required",
+        title: t("admin.validation_error") || "Validation Error",
+        description: t("admin.name_required") || "Name is required",
         variant: "destructive",
       })
       return
@@ -156,13 +158,13 @@ export default function AdminProfilePage() {
       setProfile(data.profile)
 
       toast({
-        title: "Profile updated successfully ✅",
-        description: "Your profile has been updated",
+        title: t("admin.profile_updated") || "Profile updated successfully ✅",
+        description: t("admin.profile_updated_desc") || "Your profile has been updated",
       })
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.message || "Failed to update profile",
+        title: t("admin.error") || "Error",
+        description: error.message || t("admin.failed_update_profile") || "Failed to update profile",
         variant: "destructive",
       })
     } finally {
@@ -173,8 +175,8 @@ export default function AdminProfilePage() {
   const handleChangePassword = async () => {
     if (!passwordData.oldPassword || !passwordData.newPassword) {
       toast({
-        title: "Validation Error",
-        description: "All password fields are required",
+        title: t("admin.validation_error") || "Validation Error",
+        description: t("admin.all_fields_required") || "All password fields are required",
         variant: "destructive",
       })
       return
@@ -182,8 +184,8 @@ export default function AdminProfilePage() {
 
     if (passwordData.newPassword.length < 6) {
       toast({
-        title: "Validation Error",
-        description: "New password must be at least 6 characters long",
+        title: t("admin.validation_error") || "Validation Error",
+        description: t("admin.password_min_length") || "New password must be at least 6 characters long",
         variant: "destructive",
       })
       return
@@ -191,8 +193,8 @@ export default function AdminProfilePage() {
 
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       toast({
-        title: "Validation Error",
-        description: "New passwords do not match",
+        title: t("admin.validation_error") || "Validation Error",
+        description: t("admin.passwords_not_match") || "New passwords do not match",
         variant: "destructive",
       })
       return
@@ -215,8 +217,8 @@ export default function AdminProfilePage() {
       }
 
       toast({
-        title: "Password changed successfully ✅",
-        description: "Your password has been updated",
+        title: t("admin.password_changed") || "Password changed successfully ✅",
+        description: t("admin.password_changed_desc") || "Your password has been updated",
       })
 
       setPasswordData({
@@ -226,8 +228,8 @@ export default function AdminProfilePage() {
       })
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.message || "Failed to change password",
+        title: t("admin.error") || "Error",
+        description: error.message || t("admin.failed_change_password") || "Failed to change password",
         variant: "destructive",
       })
     } finally {
@@ -247,16 +249,20 @@ export default function AdminProfilePage() {
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-white dark:from-gray-900 dark:to-gray-800">
       <div className="px-4 sm:px-6 lg:px-8 py-6 sm:py-8 max-w-4xl mx-auto">
         <Link href="/admin/dashboard">
-          <Button variant="ghost" size="sm" className="mb-4">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="mb-4 border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:border-emerald-300 dark:hover:border-emerald-700 transition-all duration-300 hover:scale-105 shadow-sm hover:shadow-md"
+          >
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Dashboard
+            {t("admin.back_to_dashboard")}
           </Button>
         </Link>
 
         <Card className="shadow-lg">
           <CardHeader>
-            <CardTitle className="text-2xl">Account Settings</CardTitle>
-            <CardDescription>Manage your profile and account security</CardDescription>
+            <CardTitle className="text-2xl">{t("admin.account_settings") || "Account Settings"}</CardTitle>
+            <CardDescription>{t("admin.manage_profile_security") || "Manage your profile and account security"}</CardDescription>
           </CardHeader>
           <CardContent>
             {/* Tabs */}
@@ -269,7 +275,7 @@ export default function AdminProfilePage() {
                     : "border-transparent text-gray-500 hover:text-gray-700"
                 }`}
               >
-                Profile
+                {t("admin.profile") || "Profile"}
               </button>
               <button
                 onClick={() => setActiveTab("password")}
@@ -279,7 +285,7 @@ export default function AdminProfilePage() {
                     : "border-transparent text-gray-500 hover:text-gray-700"
                 }`}
               >
-                Password
+                {t("admin.password") || "Password"}
               </button>
             </div>
 
@@ -288,7 +294,7 @@ export default function AdminProfilePage() {
               <div className="space-y-6">
                 {/* Profile Image */}
                 <div className="space-y-2">
-                  <Label>Profile Image</Label>
+                  <Label>{t("admin.profile_image") || "Profile Image"}</Label>
                   <div className="flex items-center space-x-4">
                     <div className="relative w-24 h-24 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700">
                       {formData.profileImage ? (
@@ -314,7 +320,7 @@ export default function AdminProfilePage() {
                         >
                           <span>
                             <Camera className="w-4 h-4 mr-2" />
-                            {uploadingImage ? "Uploading..." : "Upload Image"}
+                            {uploadingImage ? (t("admin.uploading") || "Uploading...") : (t("admin.upload_image") || "Upload Image")}
                           </span>
                         </Button>
                       </Label>
@@ -335,7 +341,7 @@ export default function AdminProfilePage() {
                             setFormData((prev) => ({ ...prev, profileImage: null }))
                           }
                         >
-                          Remove Image
+                          {t("admin.remove_image") || "Remove Image"}
                         </Button>
                       )}
                     </div>
@@ -344,32 +350,32 @@ export default function AdminProfilePage() {
 
                 {/* Name */}
                 <div className="space-y-2">
-                  <Label htmlFor="name">Name</Label>
+                  <Label htmlFor="name">{t("admin.name") || "Name"}</Label>
                   <Input
                     id="name"
                     value={formData.name}
                     onChange={(e) =>
                       setFormData((prev) => ({ ...prev, name: e.target.value }))
                     }
-                    placeholder="Your name"
+                    placeholder={t("admin.name_placeholder_profile") || "Your name"}
                   />
                 </div>
 
                 {/* Email (Read-only) */}
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email">{t("admin.email") || "Email"}</Label>
                   <Input
                     id="email"
                     value={profile?.email || ""}
                     disabled
                     className="bg-gray-50 dark:bg-gray-800"
                   />
-                  <p className="text-sm text-gray-500">Email cannot be changed</p>
+                  <p className="text-sm text-gray-500">{t("admin.email_cannot_change") || "Email cannot be changed"}</p>
                 </div>
 
                 {/* Role (Read-only) */}
                 <div className="space-y-2">
-                  <Label htmlFor="role">Role</Label>
+                  <Label htmlFor="role">{t("admin.role") || "Role"}</Label>
                   <Input
                     id="role"
                     value={profile?.role || ""}
@@ -386,12 +392,12 @@ export default function AdminProfilePage() {
                   {saving ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Saving...
+                      {t("admin.saving") || "Saving..."}
                     </>
                   ) : (
                     <>
                       <Save className="w-4 h-4 mr-2" />
-                      Save Changes
+                      {t("admin.save_changes") || "Save Changes"}
                     </>
                   )}
                 </Button>
@@ -402,7 +408,7 @@ export default function AdminProfilePage() {
             {activeTab === "password" && (
               <div className="space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="old-password">Current Password</Label>
+                  <Label htmlFor="old-password">{t("admin.current_password") || "Current Password"}</Label>
                   <Input
                     id="old-password"
                     type="password"
@@ -413,12 +419,12 @@ export default function AdminProfilePage() {
                         oldPassword: e.target.value,
                       }))
                     }
-                    placeholder="Enter current password"
+                    placeholder={t("admin.enter_current_password") || "Enter current password"}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="new-password">New Password</Label>
+                  <Label htmlFor="new-password">{t("admin.new_password") || "New Password"}</Label>
                   <Input
                     id="new-password"
                     type="password"
@@ -429,12 +435,12 @@ export default function AdminProfilePage() {
                         newPassword: e.target.value,
                       }))
                     }
-                    placeholder="Enter new password (min 6 characters)"
+                    placeholder={t("admin.enter_new_password") || "Enter new password (min 6 characters)"}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="confirm-password">Confirm New Password</Label>
+                  <Label htmlFor="confirm-password">{t("admin.confirm_password") || "Confirm New Password"}</Label>
                   <Input
                     id="confirm-password"
                     type="password"
@@ -445,7 +451,7 @@ export default function AdminProfilePage() {
                         confirmPassword: e.target.value,
                       }))
                     }
-                    placeholder="Confirm new password"
+                    placeholder={t("admin.confirm_new_password") || "Confirm new password"}
                   />
                 </div>
 
@@ -457,12 +463,12 @@ export default function AdminProfilePage() {
                   {saving ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Changing...
+                      {t("admin.changing") || "Changing..."}
                     </>
                   ) : (
                     <>
                       <Lock className="w-4 h-4 mr-2" />
-                      Change Password
+                      {t("admin.change_password") || "Change Password"}
                     </>
                   )}
                 </Button>

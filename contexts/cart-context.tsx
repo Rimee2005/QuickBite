@@ -4,7 +4,7 @@ import { createContext, useContext, useState, type ReactNode } from "react"
 
 interface CartItem {
   id: string
-  name: string
+  name: { en: string; hi?: string; mai?: string; bho?: string } | string
   price: number
   emoji?: string
   image?: string

@@ -66,7 +66,22 @@ export async function PATCH(
     await connectToDatabase()
 
     const updateData: any = {}
-    if (name !== undefined) updateData.name = name
+    
+    // Handle name update - convert to new format if needed
+    if (name !== undefined) {
+      if (typeof name === 'string') {
+        // Convert string to new format
+        updateData.name = { en: name }
+      } else if (name && typeof name === 'object' && name.en) {
+        updateData.name = {
+          en: name.en,
+          hi: name.hi || undefined,
+          mai: name.mai || undefined,
+          bho: name.bho || undefined,
+        }
+      }
+    }
+    
     if (price !== undefined) updateData.price = Number(price)
     if (category !== undefined) updateData.category = category
     if (image !== undefined) updateData.image = image

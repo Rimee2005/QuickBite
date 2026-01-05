@@ -16,7 +16,7 @@ import Image from "next/image"
 interface MenuItem {
   _id?: string
   id?: number
-  name: string
+  name: { en: string; hi?: string; mai?: string; bho?: string } | string
   price: number
   category: string
   emoji?: string
@@ -42,7 +42,7 @@ export default function MenuManagementPage() {
   const [uploadingImage, setUploadingImage] = useState(false)
 
   const { toast } = useToast()
-  const { t } = useLanguage()
+  const { t, getTranslatedName, language } = useLanguage()
 
   // Fetch menu items from API
   const fetchMenuItems = async () => {
@@ -55,8 +55,8 @@ export default function MenuManagementPage() {
     } catch (error) {
       console.error('Error fetching menu items:', error)
       toast({
-        title: "Error loading menu",
-        description: "Failed to fetch menu items",
+        title: t("admin.error_loading_menu") || "Error loading menu",
+        description: t("admin.failed_fetch_menu") || "Failed to fetch menu items",
         variant: "destructive",
       })
     } finally {
@@ -66,7 +66,7 @@ export default function MenuManagementPage() {
 
   useEffect(() => {
     fetchMenuItems()
-  }, [])
+  }, [language]) // Re-fetch when language changes to ensure proper display
 
   const resetForm = () => {
     setFormData({ name: "", price: "", category: "", emoji: "", image: "", description: "" })
@@ -82,8 +82,8 @@ export default function MenuManagementPage() {
     // Validate file type
     if (!file.type.startsWith('image/')) {
       toast({
-        title: "Invalid file type",
-        description: "Please upload an image file",
+        title: t("admin.invalid_file_type") || "Invalid file type",
+        description: t("admin.please_upload_image") || "Please upload an image file",
         variant: "destructive",
       })
       return
@@ -92,8 +92,8 @@ export default function MenuManagementPage() {
     // Validate file size (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
       toast({
-        title: "File too large",
-        description: "Please upload an image smaller than 10MB",
+        title: t("admin.file_too_large") || "File too large",
+        description: t("admin.upload_smaller_image") || "Please upload an image smaller than 10MB",
         variant: "destructive",
       })
       return
@@ -124,14 +124,14 @@ export default function MenuManagementPage() {
       setImagePreview(data.url)
 
       toast({
-        title: "Image uploaded successfully ✅",
-        description: "Image has been uploaded to Cloudinary",
+        title: t("admin.image_uploaded") || "Image uploaded successfully ✅",
+        description: t("admin.image_uploaded_desc") || "Image has been uploaded to Cloudinary",
       })
     } catch (error: any) {
       console.error('Error uploading image:', error)
       toast({
-        title: "Error uploading image",
-        description: error.message || "Failed to upload image. Please try again.",
+        title: t("admin.error_uploading") || "Error uploading image",
+        description: error.message || t("admin.failed_upload") || "Failed to upload image. Please try again.",
         variant: "destructive",
       })
     } finally {
@@ -149,8 +149,8 @@ export default function MenuManagementPage() {
     const name = formData.name?.trim() || ""
     if (name.length === 0) {
       toast({
-        title: "Validation Error ❌",
-        description: "Please enter an item name",
+        title: t("admin.validation_error") || "Validation Error ❌",
+        description: t("admin.enter_item_name") || "Please enter an item name",
         variant: "destructive",
       })
       return
@@ -160,8 +160,8 @@ export default function MenuManagementPage() {
     const price = formData.price?.toString().trim() || ""
     if (price.length === 0) {
       toast({
-        title: "Validation Error ❌",
-        description: "Please enter a price",
+        title: t("admin.validation_error") || "Validation Error ❌",
+        description: t("admin.enter_price") || "Please enter a price",
         variant: "destructive",
       })
       return
@@ -170,8 +170,8 @@ export default function MenuManagementPage() {
     const priceNum = Number.parseFloat(price)
     if (isNaN(priceNum) || priceNum <= 0) {
       toast({
-        title: "Validation Error ❌",
-        description: `Please enter a valid price (greater than 0). Current value: "${price}"`,
+        title: t("admin.validation_error") || "Validation Error ❌",
+        description: `${t("admin.enter_valid_price") || "Please enter a valid price (greater than 0). Current value:"} "${price}"`,
         variant: "destructive",
       })
       return
@@ -181,8 +181,8 @@ export default function MenuManagementPage() {
     const category = formData.category?.trim() || ""
     if (category.length === 0) {
       toast({
-        title: "Validation Error ❌",
-        description: "Please select a category",
+        title: t("admin.validation_error") || "Validation Error ❌",
+        description: t("admin.select_category_required") || "Please select a category",
         variant: "destructive",
       })
       return
@@ -194,8 +194,8 @@ export default function MenuManagementPage() {
     
     if (!hasImage && !hasEmoji) {
       toast({
-        title: "Image or emoji required",
-        description: "Please upload an image or add an emoji",
+        title: t("admin.image_emoji_required") || "Image or emoji required",
+        description: t("admin.upload_image_or_emoji") || "Please upload an image or add an emoji",
         variant: "destructive",
       })
       return
@@ -242,9 +242,9 @@ export default function MenuManagementPage() {
       })
     } catch (error: any) {
       console.error('Error adding menu item:', error)
-      const errorMessage = error.message || "Failed to add menu item. Please check your connection and try again."
+      const errorMessage = error.message || t("admin.failed_add_item") || "Failed to add menu item. Please check your connection and try again."
       toast({
-        title: "Error adding item ❌",
+        title: t("admin.error_adding") || "Error adding item ❌",
         description: errorMessage,
         variant: "destructive",
       })
@@ -254,8 +254,8 @@ export default function MenuManagementPage() {
   const handleEditItem = async () => {
     if (!editingItem || !formData.name || !formData.price || !formData.category) {
       toast({
-        title: "Validation Error ❌",
-        description: "Please fill all required fields (Name, Price, Category)",
+        title: t("admin.validation_error") || "Validation Error ❌",
+        description: t("admin.fill_required_fields") || "Please fill all required fields (Name, Price, Category)",
         variant: "destructive",
       })
       return
@@ -264,8 +264,8 @@ export default function MenuManagementPage() {
     // Image or emoji is required
     if (!formData.image && !formData.emoji) {
       toast({
-        title: "Image or emoji required",
-        description: "Please upload an image or add an emoji",
+        title: t("admin.image_emoji_required") || "Image or emoji required",
+        description: t("admin.upload_image_or_emoji") || "Please upload an image or add an emoji",
         variant: "destructive",
       })
       return
@@ -274,8 +274,8 @@ export default function MenuManagementPage() {
     const itemId = editingItem._id || editingItem.id
     if (!itemId) {
       toast({
-        title: "Error",
-        description: "Invalid menu item ID",
+        title: t("admin.error") || "Error",
+        description: t("admin.invalid_item_id") || "Invalid menu item ID",
         variant: "destructive",
       })
       return
@@ -358,8 +358,10 @@ export default function MenuManagementPage() {
 
   const startEdit = (item: MenuItem) => {
     setEditingItem(item)
+    // Handle both old format (string) and new format (object)
+    const nameValue = typeof item.name === 'string' ? item.name : item.name.en
     setFormData({
-      name: item.name,
+      name: nameValue,
       price: item.price.toString(),
       category: item.category,
       emoji: item.emoji || "",
@@ -369,24 +371,43 @@ export default function MenuManagementPage() {
     setImagePreview(item.image || null)
   }
 
+  // Helper function to get translated category name
+  const getCategoryName = (category: string) => {
+    switch (category) {
+      case "Snacks":
+        return t("dashboard.categories.snacks") || "Snacks"
+      case "Beverages":
+        return t("dashboard.categories.beverages") || "Beverages"
+      case "Meals":
+        return t("dashboard.categories.meals") || "Meals"
+      default:
+        return category
+    }
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        {/* Header - Improved Layout */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 sm:mb-8">
+          <div className="flex items-center gap-3 sm:gap-4">
             <Link href="/admin/dashboard">
-              <Button variant="ghost" className="mr-4">
+              <Button 
+                variant="outline" 
+                className="border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:border-emerald-300 dark:hover:border-emerald-700 transition-all duration-300 hover:scale-105 shadow-sm hover:shadow-md"
+              >
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 {t("admin.back_to_dashboard")}
               </Button>
             </Link>
-            <h1 className="text-3xl font-bold text-gray-800">{t("admin.manage_menu_title")} 🍽️</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white">
+              {t("admin.manage_menu_title")} 🍽️
+            </h1>
           </div>
 
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="btn-primary">
+              <Button className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105">
                 <Plus className="w-4 h-4 mr-2" />
                 {t("admin.add_new_item")}
               </Button>
@@ -397,13 +418,14 @@ export default function MenuManagementPage() {
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="name">{t("admin.item_name") || "Item Name"}</Label>
-                  <Input
+                  <Label htmlFor="name">{t("admin.item_name") || "Item Name"} *</Label>
+                    <Input
                     id="name"
                     value={formData.name}
                     onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
                     className="rounded-[1.25rem]"
-                    placeholder="e.g., Burger"
+                    placeholder={t("admin.name_placeholder") || "e.g., Burger"}
+                    required
                   />
                 </div>
 
@@ -439,9 +461,9 @@ export default function MenuManagementPage() {
                         <div className="flex flex-col items-center justify-center pt-5 pb-6">
                           <Upload className="w-8 h-8 mb-2 text-gray-500" />
                           <p className="mb-2 text-sm text-gray-500">
-                            <span className="font-semibold">Click to upload</span> or drag and drop
+                            <span className="font-semibold">{t("admin.click_upload") || "Click to upload"}</span> {t("admin.drag_drop") || "or drag and drop"}
                           </p>
-                          <p className="text-xs text-gray-500">PNG, JPG, GIF up to 5MB</p>
+                          <p className="text-xs text-gray-500">{t("admin.file_types") || "PNG, JPG, GIF up to 10MB"}</p>
                         </div>
                         <input
                           id="image-upload"
@@ -463,9 +485,9 @@ export default function MenuManagementPage() {
                     value={formData.emoji}
                     onChange={(e) => setFormData((prev) => ({ ...prev, emoji: e.target.value }))}
                     className="rounded-[1.25rem]"
-                    placeholder="🍔 (optional if image is uploaded)"
+                    placeholder={t("admin.emoji_placeholder") || "🍔 (optional if image is uploaded)"}
                   />
-                  <p className="text-xs text-gray-500 mt-1">Optional: Add an emoji if no image is uploaded</p>
+                  <p className="text-xs text-gray-500 mt-1">{t("admin.emoji_optional") || "Optional: Add an emoji if no image is uploaded"}</p>
                 </div>
 
                 <div>
@@ -476,7 +498,7 @@ export default function MenuManagementPage() {
                     value={formData.price}
                     onChange={(e) => setFormData((prev) => ({ ...prev, price: e.target.value }))}
                     className="rounded-[1.25rem]"
-                    placeholder="70"
+                    placeholder={t("admin.price_placeholder") || "70"}
                   />
                 </div>
                 <div>
@@ -502,7 +524,7 @@ export default function MenuManagementPage() {
                     value={formData.description}
                     onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
                     className="rounded-[1.25rem]"
-                    placeholder="Brief description of the item"
+                    placeholder={t("admin.description_placeholder") || "Brief description of the item"}
                   />
                 </div>
                 <Button onClick={handleAddItem} className="w-full btn-primary">
@@ -516,16 +538,16 @@ export default function MenuManagementPage() {
         {/* Loading State */}
         {loading && (
           <div className="text-center py-12">
-            <p className="text-gray-600">Loading menu items...</p>
+            <p className="text-gray-600 dark:text-gray-300">{t("admin.loading_menu") || "Loading menu items..."}</p>
           </div>
         )}
 
         {/* Menu Items Grid */}
         {!loading && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
             {menuItems.length === 0 ? (
               <div className="col-span-full text-center py-12">
-                <p className="text-gray-600">No menu items yet. Add your first item!</p>
+                <p className="text-gray-600 dark:text-gray-300">{t("admin.no_items_yet") || "No menu items yet. Add your first item!"}</p>
               </div>
             ) : (
               menuItems.map((item) => {
@@ -538,7 +560,7 @@ export default function MenuManagementPage() {
                         {item.image ? (
                           <Image
                             src={item.image}
-                            alt={item.name}
+                            alt={getTranslatedName(item)}
                             fill
                             className="object-cover"
                           />
@@ -549,7 +571,7 @@ export default function MenuManagementPage() {
                         )}
                       </div>
                       <div className="p-4">
-                        <CardTitle className="text-lg">{item.name}</CardTitle>
+                        <CardTitle className="text-lg">{getTranslatedName(item)}</CardTitle>
                         {item.description && (
                           <p className="text-sm text-gray-500 mt-1">{item.description}</p>
                         )}
@@ -557,8 +579,8 @@ export default function MenuManagementPage() {
                     </CardHeader>
                     <CardContent>
                       <div className="text-center mb-4">
-                        <p className="text-emerald-600 font-bold text-lg">₹{item.price}</p>
-                        <p className="text-gray-500 text-sm">{item.category}</p>
+                        <p className="text-emerald-600 dark:text-emerald-400 font-bold text-lg">₹{item.price}</p>
+                        <p className="text-gray-500 dark:text-gray-400 text-sm">{getCategoryName(item.category)}</p>
                       </div>
                       <div className="flex space-x-2">
                         <Dialog>
@@ -579,12 +601,13 @@ export default function MenuManagementPage() {
                       </DialogHeader>
                       <div className="space-y-4">
                         <div>
-                          <Label htmlFor="edit-name">{t("admin.item_name") || "Item Name"}</Label>
+                          <Label htmlFor="edit-name">{t("admin.item_name") || "Item Name"} *</Label>
                           <Input
                             id="edit-name"
                             value={formData.name}
                             onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
                             className="rounded-[1.25rem]"
+                            required
                           />
                         </div>
 
@@ -621,15 +644,15 @@ export default function MenuManagementPage() {
                                   {uploadingImage ? (
                                     <>
                                       <div className="w-8 h-8 mb-2 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-                                      <p className="mb-2 text-sm text-gray-500">Uploading...</p>
+                                      <p className="mb-2 text-sm text-gray-500">{t("admin.uploading") || "Uploading..."}</p>
                                     </>
                                   ) : (
                                     <>
                                       <Upload className="w-8 h-8 mb-2 text-gray-500" />
                                       <p className="mb-2 text-sm text-gray-500">
-                                        <span className="font-semibold">Click to upload</span> or drag and drop
+                                        <span className="font-semibold">{t("admin.click_upload") || "Click to upload"}</span> {t("admin.drag_drop") || "or drag and drop"}
                                       </p>
-                                      <p className="text-xs text-gray-500">PNG, JPG, GIF up to 10MB</p>
+                                      <p className="text-xs text-gray-500">{t("admin.file_types") || "PNG, JPG, GIF up to 10MB"}</p>
                                     </>
                                   )}
                                 </div>
@@ -653,7 +676,7 @@ export default function MenuManagementPage() {
                             value={formData.emoji}
                             onChange={(e) => setFormData((prev) => ({ ...prev, emoji: e.target.value }))}
                             className="rounded-[1.25rem]"
-                            placeholder="🍔 (optional if image is uploaded)"
+                            placeholder={t("admin.emoji_placeholder") || "🍔 (optional if image is uploaded)"}
                           />
                         </div>
                         <div>
@@ -689,7 +712,7 @@ export default function MenuManagementPage() {
                             value={formData.description}
                             onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
                             className="rounded-[1.25rem]"
-                            placeholder="Brief description of the item"
+                            placeholder={t("admin.description_placeholder") || "Brief description of the item"}
                           />
                         </div>
                         <Button onClick={handleEditItem} className="w-full btn-primary">

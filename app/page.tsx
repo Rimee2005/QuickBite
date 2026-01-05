@@ -379,7 +379,7 @@ export default function LandingPage() {
       name: t("food.masala_dosa"),
       price: 60,
       emoji: "🥞",
-      image: "https://images.unsplash.com/photo-1631452180519-c014fe946bc7?w=500&h=500&fit=crop&q=80",
+      image: "https://vismaifood.com/storage/app/uploads/public/8b4/19e/427/thumb__700_0_0_0_auto.jpg",
       offer: null,
       popular: true,
     },
@@ -783,7 +783,7 @@ export default function LandingPage() {
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
                 className="w-full h-full"
-                title="Canteen, College Campus - WIT, Mansaar Colony, Darbhanga, Bihar 846008"
+                title={`${t("location.address")} - ${t("location.full_address")}`}
               />
             </Card>
 
@@ -796,9 +796,9 @@ export default function LandingPage() {
                     <MapPinIcon className="w-6 h-6 sm:w-7 sm:h-7 text-emerald-600 dark:text-emerald-400" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-gray-800 dark:text-white text-base sm:text-lg mb-1">Canteen, College Campus</h3>
+                    <h3 className="font-bold text-gray-800 dark:text-white text-base sm:text-lg mb-1">{t("location.address")}</h3>
                     <p className="text-gray-600 dark:text-gray-300 text-sm sm:text-base leading-relaxed">
-                      WIT, Mansaar Colony, Darbhanga, Bihar 846008
+                      {t("location.full_address")}
                     </p>
                   </div>
                 </div>
@@ -826,7 +826,7 @@ export default function LandingPage() {
               >
                 <Button className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] h-12 sm:h-14 text-base sm:text-lg font-semibold group">
                   <Navigation2 className="w-5 h-5 sm:w-6 sm:h-6 mr-2 group-hover:translate-x-1 transition-transform duration-300" />
-                  Get Directions
+                  {t("location.get_directions")}
                   <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 ml-2 group-hover:translate-x-1 transition-transform duration-300" />
                 </Button>
               </a>

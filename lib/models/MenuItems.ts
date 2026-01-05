@@ -1,7 +1,12 @@
 import mongoose from 'mongoose'
 
 export interface IMenuItem {
-  name: string
+  name: {
+    en: string
+    hi?: string
+    mai?: string
+    bho?: string
+  }
   price: number
   category: 'Snacks' | 'Beverages' | 'Meals'
   image?: string // Cloudinary URL
@@ -13,7 +18,12 @@ export interface IMenuItem {
 }
 
 const menuItemSchema = new mongoose.Schema<IMenuItem>({
-  name: { type: String, required: true },
+  name: {
+    en: { type: String, required: true },
+    hi: { type: String },
+    mai: { type: String },
+    bho: { type: String },
+  },
   price: { type: Number, required: true },
   category: { 
     type: String, 

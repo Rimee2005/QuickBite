@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
-import { Search, Plus, Minus, ShoppingCart, LogOut, Menu, X, Home, User } from "lucide-react"
+import { Search, Plus, Minus, ShoppingCart, LogOut, Menu, X, User } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
@@ -18,7 +18,7 @@ import { ImageIcon, Star } from "lucide-react"
 interface FoodItem {
   _id?: string
   id?: number
-  name: string
+  name: { en: string; hi?: string; mai?: string; bho?: string } | string
   price: number
   category: string
   image?: string
@@ -32,6 +32,8 @@ export default function StudentDashboard() {
   const [foodItems, setFoodItems] = useState<FoodItem[]>([])
   const [loading, setLoading] = useState(true)
   const [ratings, setRatings] = useState<Record<string, { averageRating: number; totalReviews: number }>>({})
+  const [mostOrdered, setMostOrdered] = useState<Record<string, { totalQuantity: number; orderCount: number }>>({})
+  const [mostOrderedThreshold, setMostOrderedThreshold] = useState(0)
   const [selectedCategory, setSelectedCategory] = useState("All")
   const [searchTerm, setSearchTerm] = useState("")
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -39,7 +41,7 @@ export default function StudentDashboard() {
   const router = useRouter()
   const { user, logout, isAuthenticated, isLoading } = useAuth()
   const { items, addItem, updateQuantity, getTotalItems } = useCart()
-  const { t } = useLanguage()
+  const { t, getTranslatedName, language } = useLanguage()
 
   // Fetch menu items from API
   useEffect(() => {
@@ -66,6 +68,18 @@ export default function StudentDashboard() {
               }
             }
           }
+
+          // Fetch most ordered items
+          try {
+            const mostOrderedResponse = await fetch('/api/menu/most-ordered')
+            if (mostOrderedResponse.ok) {
+              const mostOrderedData = await mostOrderedResponse.json()
+              setMostOrdered(mostOrderedData.mostOrdered || {})
+              setMostOrderedThreshold(mostOrderedData.threshold || 0)
+            }
+          } catch (error) {
+            console.error('Error fetching most ordered items:', error)
+          }
         } else {
           // Fallback to empty array if API fails
           setFoodItems([])
@@ -79,12 +93,12 @@ export default function StudentDashboard() {
     }
 
     fetchMenuItems()
-  }, [])
+  }, [language]) // Re-fetch when language changes to ensure proper display
 
   const categories = [
     { key: "All", label: t("dashboard.categories.all") },
-    { key: "Snacks", label: t("dashboard.categories.snacks") },
     { key: "Beverages", label: t("dashboard.categories.beverages") },
+    { key: "Snacks", label: t("dashboard.categories.snacks") },
     { key: "Meals", label: t("dashboard.categories.meals") },
   ]
 
@@ -97,7 +111,8 @@ export default function StudentDashboard() {
 
   const filteredItems = foodItems.filter((item) => {
     const matchesCategory = selectedCategory === "All" || item.category === selectedCategory
-    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase())
+    const translatedName = getTranslatedName(item)
+    const matchesSearch = translatedName.toLowerCase().includes(searchTerm.toLowerCase())
     return matchesCategory && matchesSearch
   })
 
@@ -105,8 +120,8 @@ export default function StudentDashboard() {
     const itemId = item._id || item.id
     if (!itemId) {
       toast({
-        title: "Error adding item",
-        description: "Item ID is missing. Please refresh the page.",
+        title: t("dashboard.error_adding_item") || "Error adding item",
+        description: t("dashboard.item_id_missing") || "Item ID is missing. Please refresh the page.",
         variant: "destructive",
       })
       return
@@ -121,7 +136,7 @@ export default function StudentDashboard() {
     })
     toast({
       title: `${t("dashboard.added_to_cart")} 🛒`,
-      description: `${item.name} ${item.emoji || ""} ${t("dashboard.added_desc")}`,
+      description: `${getTranslatedName(item)} ${item.emoji || ""} ${t("dashboard.added_desc")}`,
     })
   }
 
@@ -166,15 +181,6 @@ export default function StudentDashboard() {
 
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center space-x-3">
-              <Link href="/">
-                <Button 
-                  variant="outline" 
-                  className="border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:border-emerald-300 dark:hover:border-emerald-700 transition-all duration-300 hover:scale-105 shadow-sm hover:shadow-md"
-                >
-                  <Home className="w-4 h-4 mr-2" />
-                  {t("login.back_home")}
-                </Button>
-              </Link>
               <Link href="/student/orders">
                 <Button variant="ghost" className="text-gray-600 dark:text-gray-300">
                   {t("dashboard.my_orders")}
@@ -194,7 +200,7 @@ export default function StudentDashboard() {
               <Link href="/student/profile">
                 <Button variant="ghost" className="text-gray-600 dark:text-gray-300">
                   <User className="w-4 h-4 mr-2" />
-                  Account
+                  {t("dashboard.account") || "Account"}
                 </Button>
               </Link>
               <Button variant="ghost" className="text-gray-600 dark:text-gray-300" onClick={handleLogout}>
@@ -224,15 +230,6 @@ export default function StudentDashboard() {
           {/* Mobile Menu */}
           {mobileMenuOpen && (
             <div className="md:hidden border-t border-gray-200 dark:border-gray-700 py-4 space-y-2">
-              <Link href="/" className="block">
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:border-emerald-300 dark:hover:border-emerald-700 transition-all duration-300"
-                >
-                  <Home className="w-4 h-4 mr-2" />
-                  {t("login.back_home")}
-                </Button>
-              </Link>
               <Link href="/student/orders" className="block">
                 <Button variant="ghost" className="w-full justify-start text-gray-600 dark:text-gray-300">
                   {t("dashboard.my_orders")}
@@ -241,7 +238,7 @@ export default function StudentDashboard() {
               <Link href="/student/profile" className="block">
                 <Button variant="ghost" className="w-full justify-start text-gray-600 dark:text-gray-300">
                   <User className="w-4 h-4 mr-2" />
-                  Account
+                  {t("dashboard.account") || "Account"}
                 </Button>
               </Link>
               <Button
@@ -261,7 +258,7 @@ export default function StudentDashboard() {
         {/* Greeting - Mobile Optimized */}
         <div className="mb-6 sm:mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white mb-2">
-            {t("dashboard.greeting")} {user?.name || "Student"} 👋
+            {t("dashboard.greeting")} {user?.name || t("dashboard.student") || "Student"} 👋
           </h1>
           <p className="text-gray-600 dark:text-gray-300 text-sm sm:text-base">{t("dashboard.question")}</p>
         </div>
@@ -309,36 +306,50 @@ export default function StudentDashboard() {
             return (
               <Card
                 key={itemId}
-                className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 dark:border-gray-700 overflow-hidden transform hover:-translate-y-1"
+                className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 border border-gray-100 dark:border-gray-700 overflow-hidden transform hover:-translate-y-2 hover:scale-[1.02] group relative"
                 style={{
-                  animationDelay: `${index * 100}ms`,
-                  animationName: "slideInUp",
-                  animationDuration: "0.5s",
-                  animationTimingFunction: "ease-out",
-                  animationFillMode: "forwards",
+                  animationDelay: `${index * 50}ms`,
+                  animation: "slideInUp 0.6s ease-out forwards",
+                  opacity: 0,
                 }}
               >
+                {/* Most Ordered Badge */}
+                {(() => {
+                  const itemIdStr = String(itemId)
+                  const orderData = mostOrdered[itemIdStr]
+                  const isMostOrdered = orderData && orderData.totalQuantity >= mostOrderedThreshold && mostOrderedThreshold > 0
+                  return isMostOrdered ? (
+                    <div className="absolute top-3 right-3 z-10 animate-pulse">
+                      <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white border-0 shadow-lg text-xs font-bold px-2.5 py-1 rounded-full">
+                        ⭐ {t("dashboard.most_ordered") || "Most Ordered"}
+                      </Badge>
+                    </div>
+                  ) : null
+                })()}
+
                 {/* Food Image/Emoji */}
-                <div className="aspect-square bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center relative overflow-hidden">
+                <div className="aspect-square bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center relative overflow-hidden group-hover:scale-105 transition-transform duration-500">
                   {item.image ? (
                     <Image
                       src={item.image}
-                      alt={item.name}
+                      alt={getTranslatedName(item)}
                       fill
-                      className="object-cover"
+                      className="object-cover transition-transform duration-500 group-hover:scale-110"
                     />
                   ) : item.emoji ? (
-                    <span className="text-4xl sm:text-5xl lg:text-6xl">{item.emoji}</span>
+                    <span className="text-4xl sm:text-5xl lg:text-6xl transition-transform duration-300 group-hover:scale-125">{item.emoji}</span>
                   ) : (
                     <ImageIcon className="w-16 h-16 text-gray-400" />
                   )}
+                  {/* Gradient overlay on hover */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 </div>
 
-                <CardContent className="p-4">
+                <CardContent className="p-4 sm:p-5">
                   {/* Item Info */}
                   <div className="mb-4">
-                    <h3 className="font-bold text-base sm:text-lg text-gray-800 dark:text-white mb-1 line-clamp-1">
-                      {item.name} {item.emoji || ""}
+                    <h3 className="font-bold text-base sm:text-lg text-gray-800 dark:text-white mb-1.5 line-clamp-1 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors duration-300">
+                      {getTranslatedName(item)} {item.emoji || ""}
                     </h3>
                     {item.description && (
                       <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm mb-2 line-clamp-2">
@@ -377,20 +388,20 @@ export default function StudentDashboard() {
 
                   {/* Add to Cart / Quantity Controls */}
                   {quantity > 0 ? (
-                    <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-700 rounded-2xl p-2">
+                    <div className="flex items-center justify-between bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-600 rounded-2xl p-2 shadow-inner border border-gray-200 dark:border-gray-600">
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="w-8 h-8 p-0 rounded-xl hover:bg-red-100 dark:hover:bg-red-900 text-red-600 dark:text-red-400"
+                        className="w-8 h-8 p-0 rounded-xl hover:bg-red-100 dark:hover:bg-red-900 text-red-600 dark:text-red-400 transition-all duration-200 hover:scale-110 active:scale-95"
                         onClick={() => updateQuantity(itemId?.toString() || "", quantity - 1)}
                       >
                         <Minus className="w-4 h-4" />
                       </Button>
-                      <span className="font-bold text-lg text-gray-800 dark:text-white px-4">{quantity}</span>
+                      <span className="font-bold text-lg text-gray-800 dark:text-white px-4 min-w-[2rem] text-center">{quantity}</span>
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="w-8 h-8 p-0 rounded-xl hover:bg-emerald-100 dark:hover:bg-emerald-900 text-emerald-600 dark:text-emerald-400"
+                        className="w-8 h-8 p-0 rounded-xl hover:bg-emerald-100 dark:hover:bg-emerald-900 text-emerald-600 dark:text-emerald-400 transition-all duration-200 hover:scale-110 active:scale-95"
                         onClick={() => updateQuantity(itemId?.toString() || "", quantity + 1)}
                       >
                         <Plus className="w-4 h-4" />
@@ -398,7 +409,7 @@ export default function StudentDashboard() {
                     </div>
                   ) : (
                     <Button
-                      className="w-full bg-gradient-to-r from-emerald-400 to-emerald-600 hover:from-emerald-500 hover:to-emerald-700 text-white font-medium py-3 px-4 rounded-2xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 text-sm sm:text-base"
+                      className="w-full bg-gradient-to-r from-emerald-400 to-emerald-600 hover:from-emerald-500 hover:to-emerald-700 text-white font-medium py-3 px-4 rounded-2xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 hover:scale-105 active:scale-95 text-sm sm:text-base"
                       onClick={() => addToCart(item)}
                     >
                       {t("dashboard.add_to_cart")}
@@ -440,11 +451,19 @@ export default function StudentDashboard() {
         @keyframes slideInUp {
           from {
             opacity: 0;
-            transform: translateY(30px);
+            transform: translateY(30px) scale(0.95);
           }
           to {
             opacity: 1;
-            transform: translateY(0);
+            transform: translateY(0) scale(1);
+          }
+        }
+        @keyframes pulse {
+          0%, 100% {
+            opacity: 1;
+          }
+          50% {
+            opacity: 0.7;
           }
         }
         .scrollbar-hide {

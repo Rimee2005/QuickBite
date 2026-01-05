@@ -106,8 +106,20 @@ export async function POST(req: NextRequest) {
         ? String(item.menuItemId) 
         : `temp-${Date.now()}-${index}`
       
-      if (!item.name || String(item.name).trim().length === 0) {
+      // Handle both old format (string) and new format (object)
+      let nameValue: string
+      if (typeof item.name === 'string') {
+        nameValue = item.name.trim()
+      } else if (item.name && typeof item.name === 'object' && item.name.en) {
+        // For new format, use the English name as the stored name
+        // The full object structure is preserved in the menu item itself
+        nameValue = item.name.en.trim()
+      } else {
         throw new Error(`Item ${index + 1}: name is required`)
+      }
+      
+      if (nameValue.length === 0) {
+        throw new Error(`Item ${index + 1}: name cannot be empty`)
       }
       if (!item.quantity || item.quantity <= 0) {
         throw new Error(`Item ${index + 1}: valid quantity is required`)
@@ -117,7 +129,7 @@ export async function POST(req: NextRequest) {
       }
       return {
         menuItemId: menuItemId,
-        name: String(item.name).trim(),
+        name: nameValue,
         quantity: Number(item.quantity),
         price: Number(item.price),
       }
