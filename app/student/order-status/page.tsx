@@ -274,28 +274,32 @@ export default function OrderStatusPage() {
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 sticky top-0 z-40">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-20 sm:h-24 gap-4">
+          <div className="flex items-center justify-between h-20 sm:h-24 gap-4 sm:gap-6 py-3 sm:py-4">
             {/* Left Side - Back Button and Title */}
             <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
               <Link href="/student/dashboard">
                 <Button
                   variant="outline"
                   size="sm"
-                  className="border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:border-emerald-300 dark:hover:border-emerald-700 transition-all duration-300 hover:scale-105 shadow-sm hover:shadow-md h-9 sm:h-10 px-3 sm:px-4 flex-shrink-0"
+                  className="border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:border-emerald-300 dark:hover:border-emerald-700 transition-all duration-300 hover:scale-105 shadow-sm hover:shadow-md h-10 sm:h-11 px-4 sm:px-5 flex-shrink-0 flex items-center justify-center"
                 >
-                  <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2 flex-shrink-0" />
-                  <span className="hidden sm:inline whitespace-nowrap">{t("status.back_to_menu") || "Back to Menu"}</span>
-                  <span className="sm:hidden whitespace-nowrap">{t("orders.menu") || "Menu"}</span>
+                  <ArrowLeft className="w-4 h-4 mr-2 flex-shrink-0" />
+                  <span className="hidden sm:inline whitespace-nowrap text-sm font-medium">{t("status.back_to_menu") || "Back to Menu"}</span>
+                  <span className="sm:hidden whitespace-nowrap text-sm font-medium">{t("orders.menu") || "Menu"}</span>
                 </Button>
               </Link>
-              <div className="min-w-0 flex-1">
-                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 dark:text-white truncate leading-tight">{t("status.title")}</h1>
-                <p className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm truncate mt-0.5">{t("status.subtitle")}</p>
+              <div className="min-w-0 flex-1 flex flex-col justify-center">
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white truncate leading-tight mb-1">
+                  {t("status.title")}
+                </h1>
+                <p className="text-gray-400 dark:text-gray-400 text-xs sm:text-sm truncate font-normal">
+                  {t("status.subtitle")}
+                </p>
               </div>
             </div>
             
             {/* Right Side - Status Icon and Badge */}
-            <div className="flex items-center justify-end gap-3 flex-shrink-0">
+            <div className="flex items-center justify-end gap-3 sm:gap-4 flex-shrink-0">
               <div className="flex flex-col items-end gap-2">
                 <div className="text-3xl sm:text-4xl leading-none">{getStatusIcon()}</div>
                 <Badge className={`bg-gradient-to-r ${getStatusColor()} text-white border-0 text-xs sm:text-sm font-semibold px-2.5 py-1 shadow-md`}>
@@ -308,11 +312,11 @@ export default function OrderStatusPage() {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        <div className="grid lg:grid-cols-3 gap-8">
+        <div className="grid lg:grid-cols-3 gap-6 sm:gap-8 items-start">
           {/* Main Status Card */}
           <div className="lg:col-span-2">
             <Card className="bg-white dark:bg-gray-800 rounded-[2rem] shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
-              <CardHeader className={`bg-gradient-to-r ${getStatusColor()} text-white p-8`}>
+              <CardHeader className={`bg-gradient-to-r ${getStatusColor()} text-white p-6 sm:p-8`}>
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="text-2xl font-bold mb-2">{t("status.order") || "Order"} {orderId}</CardTitle>
@@ -322,7 +326,7 @@ export default function OrderStatusPage() {
                 </div>
               </CardHeader>
 
-              <CardContent className="p-8 space-y-8">
+              <CardContent className="p-6 sm:p-8 space-y-6 sm:space-y-8">
                 {/* Progress Bar */}
                 <div className="space-y-4">
                   <div className="flex justify-between text-sm font-medium text-gray-600 dark:text-gray-300">
@@ -497,13 +501,13 @@ export default function OrderStatusPage() {
           </div>
 
           {/* Side Information */}
-          <div className="lg:col-span-1 space-y-6">
+          <div className="lg:col-span-1 space-y-5 sm:space-y-6">
             {/* Order Details */}
             <Card className="bg-white dark:bg-gray-800 rounded-[1.5rem] shadow-lg border border-gray-100 dark:border-gray-700">
-              <CardHeader>
+              <CardHeader className="p-4 sm:p-6 pb-3 sm:pb-4">
                 <CardTitle className="text-lg font-bold text-gray-800 dark:text-white">{t("status.order_details")}</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="p-4 sm:p-6 pt-0 space-y-3 sm:space-y-4">
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600 dark:text-gray-300">{t("status.order_id")}</span>
@@ -523,10 +527,10 @@ export default function OrderStatusPage() {
 
             {/* Contact Information */}
             <Card className="bg-white dark:bg-gray-800 rounded-[1.5rem] shadow-lg border border-gray-100 dark:border-gray-700">
-              <CardHeader>
+              <CardHeader className="p-4 sm:p-6 pb-3 sm:pb-4">
                 <CardTitle className="text-lg font-bold text-gray-800 dark:text-white">{t("status.need_help")}</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="p-4 sm:p-6 pt-0 space-y-3 sm:space-y-4">
                 <div className="space-y-3">
                   <div className="flex items-center space-x-3">
                     <Phone className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
@@ -548,7 +552,7 @@ export default function OrderStatusPage() {
 
             {/* Quick Actions */}
             <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-900 dark:to-emerald-800 rounded-[1.5rem] shadow-lg border-0">
-              <CardContent className="p-6 text-center">
+              <CardContent className="p-4 sm:p-6 text-center">
                 <h3 className="font-bold text-emerald-800 dark:text-emerald-200 mb-4">{t("status.quick_actions")}</h3>
                 <div className="space-y-3">
                   <Link href="/student/dashboard">
