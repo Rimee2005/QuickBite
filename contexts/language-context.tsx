@@ -35,7 +35,7 @@ const translations = {
 
     // Location
     "location.title": "Find Us Easily",
-    "location.address": "Block B, Ground Floor, College Campus",
+    "location.address": "Canteen, College Campus",
     "location.block_b": "Block B, Ground Floor",
 
     // Feedback

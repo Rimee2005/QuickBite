@@ -38,6 +38,9 @@ import {
   Heart,
   Award,
   Zap,
+  Navigation2,
+  Activity,
+  Circle,
 } from "lucide-react"
 import Link from "next/link"
 import { useState, useEffect, useMemo } from "react"
@@ -53,7 +56,7 @@ import { useToast } from "@/hooks/use-toast"
 
 // Team members, fun facts, and FAQs will be defined inside component to use translations
 
-// Animated counter component
+// Animated counter component with smooth easing
 function AnimatedCounter({ end, duration = 2000, suffix = "" }: { end: number; duration?: number; suffix?: string }) {
   const [count, setCount] = useState(0)
 
@@ -61,13 +64,21 @@ function AnimatedCounter({ end, duration = 2000, suffix = "" }: { end: number; d
     let startTime: number
     let animationFrame: number
 
+    const easeOutCubic = (t: number): number => {
+      return 1 - Math.pow(1 - t, 3)
+    }
+
     const animate = (currentTime: number) => {
       if (!startTime) startTime = currentTime
-      const progress = Math.min((currentTime - startTime) / duration, 1)
-      setCount(Math.floor(progress * end))
+      const elapsed = currentTime - startTime
+      const progress = Math.min(elapsed / duration, 1)
+      const easedProgress = easeOutCubic(progress)
+      setCount(Math.floor(easedProgress * end))
 
       if (progress < 1) {
         animationFrame = requestAnimationFrame(animate)
+      } else {
+        setCount(end) // Ensure final value is exact
       }
     }
 
@@ -76,7 +87,7 @@ function AnimatedCounter({ end, duration = 2000, suffix = "" }: { end: number; d
   }, [end, duration])
 
   return (
-    <span className="animate-count-up">
+    <span className="tabular-nums">
       {count}
       {suffix}
     </span>
@@ -544,84 +555,142 @@ export default function LandingPage() {
       </section>
 
       {/* Canteen Location Map */}
-      <section className="bg-white dark:bg-gray-800 py-12 sm:py-16 transition-colors duration-300">
+      <section className="bg-gradient-to-b from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 py-10 sm:py-12 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-8 sm:mb-12">
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white mb-3 sm:mb-4">{t("location.title")} 📍</h2>
+          <div className="text-center mb-6 sm:mb-8">
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white mb-2 sm:mb-3">{t("location.title")} 📍</h2>
             <p className="text-base sm:text-lg text-gray-600 dark:text-gray-300">{t("location.address")}</p>
           </div>
 
-          <div className="grid lg:grid-cols-2 gap-6 sm:gap-8 items-center">
-            <Card className="bg-gray-100 dark:bg-gray-700 rounded-[1.25rem] shadow-lg border border-gray-200 dark:border-gray-600 p-6 sm:p-8 h-48 sm:h-64 flex items-center justify-center">
-              <div className="text-center">
-                <MapPinIcon className="w-12 h-12 sm:w-16 sm:h-16 text-emerald-500 mx-auto mb-3 sm:mb-4" />
-                <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300">{t("location.map_coming_soon")}</p>
-                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-2">
-                  {t("location.map_integration")}
-                </p>
-              </div>
+          <div className="grid lg:grid-cols-2 gap-5 sm:gap-6 items-stretch">
+            {/* Map Card */}
+            <Card className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-600 p-0 overflow-hidden h-56 sm:h-72 lg:h-80 transition-all duration-300 hover:shadow-2xl hover:scale-[1.01]">
+              <iframe
+                src="https://maps.google.com/maps?q=WIT%2C+Mansaar+Colony%2C+Darbhanga%2C+Bihar+846008&t=m&z=16&ie=UTF8&iwloc=&output=embed"
+                width="100%"
+                height="100%"
+                style={{ border: 0 }}
+                allowFullScreen
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                className="w-full h-full"
+                title="Canteen, College Campus - WIT, Mansaar Colony, Darbhanga, Bihar 846008"
+              />
             </Card>
 
-            <div className="space-y-3 sm:space-y-4">
-              <Card className="bg-white dark:bg-gray-700 rounded-[1.25rem] shadow-lg border border-gray-100 dark:border-gray-600 p-4 sm:p-6">
-                <div className="flex items-center space-x-3 sm:space-x-4">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-100 dark:bg-emerald-900 rounded-full flex items-center justify-center flex-shrink-0">
-                    <MapPinIcon className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-600 dark:text-emerald-400" />
+            {/* Info Cards */}
+            <div className="space-y-4 sm:space-y-4 flex flex-col justify-center">
+              {/* Location Card */}
+              <Card className="bg-gradient-to-br from-white to-emerald-50/30 dark:from-gray-700 dark:to-emerald-900/20 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-600 p-5 sm:p-6 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] hover:border-emerald-300 dark:hover:border-emerald-700">
+                <div className="flex items-start space-x-4 sm:space-x-5">
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-emerald-100 to-emerald-200 dark:from-emerald-900 dark:to-emerald-800 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md">
+                    <MapPinIcon className="w-6 h-6 sm:w-7 sm:h-7 text-emerald-600 dark:text-emerald-400" />
                   </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-800 dark:text-white text-sm sm:text-base">{t("location.block_b")}</h3>
-                    <p className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm">{t("location.main_campus")}</p>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-gray-800 dark:text-white text-base sm:text-lg mb-1">Canteen, College Campus</h3>
+                    <p className="text-gray-600 dark:text-gray-300 text-sm sm:text-base leading-relaxed">
+                      WIT, Mansaar Colony, Darbhanga, Bihar 846008
+                    </p>
                   </div>
                 </div>
               </Card>
 
-              <Card className="bg-white dark:bg-gray-700 rounded-[1.25rem] shadow-lg border border-gray-100 dark:border-gray-600 p-4 sm:p-6">
-                <div className="flex items-center space-x-3 sm:space-x-4">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0">
-                    <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400" />
+              {/* Hours Card */}
+              <Card className="bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-700 dark:to-blue-900/20 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-600 p-5 sm:p-6 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] hover:border-blue-300 dark:hover:border-blue-700">
+                <div className="flex items-start space-x-4 sm:space-x-5">
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900 dark:to-blue-800 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md">
+                    <Clock className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600 dark:text-blue-400" />
                   </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-800 dark:text-white text-sm sm:text-base">{t("location.open_hours")}</h3>
-                    <p className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm">{t("location.hours")}</p>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-gray-800 dark:text-white text-base sm:text-lg mb-1">{t("location.open_hours")}</h3>
+                    <p className="text-gray-600 dark:text-gray-300 text-sm sm:text-base leading-relaxed">{t("location.hours")}</p>
                   </div>
                 </div>
               </Card>
+
+              {/* Get Directions Button */}
+              <a
+                href="https://www.google.com/maps/dir/?api=1&destination=WIT+College+Campus%2C+Mansaar+Colony%2C+Darbhanga%2C+Bihar+846008"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block"
+              >
+                <Button className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] h-12 sm:h-14 text-base sm:text-lg font-semibold group">
+                  <Navigation2 className="w-5 h-5 sm:w-6 sm:h-6 mr-2 group-hover:translate-x-1 transition-transform duration-300" />
+                  Get Directions
+                  <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 ml-2 group-hover:translate-x-1 transition-transform duration-300" />
+                </Button>
+              </a>
             </div>
           </div>
         </div>
       </section>
 
       {/* Live Stats Section */}
-      <section className="py-12 sm:py-16 bg-gradient-to-br from-emerald-50 to-white dark:from-gray-900 dark:to-gray-800 transition-colors duration-300">
+      <section className="py-10 sm:py-12 bg-gray-200 dark:bg-[#2d3748] transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-8 sm:mb-12">
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white mb-3 sm:mb-4">{t("stats.title")} 📊</h2>
-            <p className="text-base sm:text-lg text-gray-600 dark:text-gray-300">{t("stats.subtitle")}</p>
+          <div className="text-center mb-8 sm:mb-10">
+            <div className="flex items-center justify-center gap-3 mb-3 flex-wrap">
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 dark:text-gray-100">{t("stats.title")}</h2>
+              {/* LIVE Indicator */}
+              <div className="flex items-center gap-1.5 px-2.5 py-1 bg-red-50/80 dark:bg-red-950/40 rounded-full border border-red-200/60 dark:border-red-900/50">
+                <Circle className="w-1.5 h-1.5 fill-red-400 text-red-400 animate-pulse" />
+                <span className="text-xs font-medium text-red-500 dark:text-red-400 tracking-wide">LIVE</span>
+              </div>
+            </div>
+            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300">{t("stats.subtitle")}</p>
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
-            <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-900 dark:to-emerald-800 rounded-[1.25rem] shadow-lg border-0 p-6 sm:p-8 text-center">
-              <TrendingUp className="w-10 h-10 sm:w-12 sm:h-12 text-emerald-600 dark:text-emerald-400 mx-auto mb-3 sm:mb-4" />
-              <div className="text-3xl sm:text-4xl font-bold text-emerald-700 dark:text-emerald-300 mb-2">
-                <AnimatedCounter end={247} suffix="+" />
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 lg:gap-6">
+            {/* Total Orders Card - Emerald Primary */}
+            <Card className="group relative bg-gradient-to-br from-gray-300/95 via-emerald-50/90 to-gray-300/95 dark:from-gray-600 dark:via-gray-600/95 dark:to-gray-600 rounded-2xl shadow-lg hover:shadow-xl border-2 border-emerald-300/40 dark:border-emerald-600/30 p-5 sm:p-6 text-center transition-all duration-300 hover:brightness-105 hover:-translate-y-0.5 overflow-hidden">
+              {/* Subtle emerald glow effect */}
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-400/6 to-transparent dark:from-emerald-500/8 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="relative z-10">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 mx-auto mb-3 sm:mb-4 bg-gradient-to-br from-emerald-200/70 to-emerald-300/50 dark:from-emerald-700/35 dark:to-emerald-600/25 rounded-lg flex items-center justify-center shadow-md group-hover:shadow-lg transition-all duration-300 ring-1 ring-emerald-400/30 dark:ring-emerald-600/25">
+                  <TrendingUp className="w-6 h-6 sm:w-7 sm:h-7 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <div className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-800 dark:text-gray-100 mb-1.5 tracking-tight">
+                  <AnimatedCounter end={247} suffix="+" />
+                </div>
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 font-medium mt-2 uppercase tracking-wide">
+                  {t("stats.total_orders")}
+                </p>
               </div>
-              <p className="text-sm sm:text-base text-emerald-600 dark:text-emerald-400 font-medium">🍲 {t("stats.total_orders")}</p>
             </Card>
 
-            <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900 dark:to-blue-800 rounded-[1.25rem] shadow-lg border-0 p-6 sm:p-8 text-center">
-              <Users className="w-10 h-10 sm:w-12 sm:h-12 text-blue-600 dark:text-blue-400 mx-auto mb-3 sm:mb-4" />
-              <div className="text-3xl sm:text-4xl font-bold text-blue-700 dark:text-blue-300 mb-2">
-                <AnimatedCounter end={5} />
+            {/* Active Admins Card - Emerald Primary with Soft Orange Accent */}
+            <Card className="group relative bg-gradient-to-br from-gray-300/95 via-emerald-50/90 to-gray-300/95 dark:from-gray-600 dark:via-gray-600/95 dark:to-gray-600 rounded-2xl shadow-lg hover:shadow-xl border-2 border-emerald-300/40 dark:border-emerald-600/30 p-5 sm:p-6 text-center transition-all duration-300 hover:brightness-105 hover:-translate-y-0.5 overflow-hidden">
+              {/* Subtle orange accent glow */}
+              <div className="absolute inset-0 bg-gradient-to-br from-orange-400/5 to-transparent dark:from-orange-500/6 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="relative z-10">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 mx-auto mb-3 sm:mb-4 bg-gradient-to-br from-orange-200/60 to-orange-300/40 dark:from-orange-700/30 dark:to-orange-600/20 rounded-lg flex items-center justify-center shadow-md group-hover:shadow-lg transition-all duration-300 ring-1 ring-orange-400/25 dark:ring-orange-600/20">
+                  <Users className="w-6 h-6 sm:w-7 sm:h-7 text-orange-600 dark:text-orange-400" />
+                </div>
+                <div className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-800 dark:text-gray-100 mb-1.5 tracking-tight">
+                  <AnimatedCounter end={5} />
+                </div>
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 font-medium mt-2 uppercase tracking-wide">
+                  {t("stats.active_admins")}
+                </p>
               </div>
-              <p className="text-sm sm:text-base text-blue-600 dark:text-blue-400 font-medium">👨‍🍳 {t("stats.active_admins")}</p>
             </Card>
 
-            <Card className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900 dark:to-purple-800 rounded-[1.25rem] shadow-lg border-0 p-6 sm:p-8 text-center sm:col-span-2 lg:col-span-1">
-              <Timer className="w-10 h-10 sm:w-12 sm:h-12 text-purple-600 dark:text-purple-400 mx-auto mb-3 sm:mb-4" />
-              <div className="text-3xl sm:text-4xl font-bold text-purple-700 dark:text-purple-300 mb-2">
-                <AnimatedCounter end={12} suffix={` ${t("common.min")}`} />
+            {/* Avg Prep Time Card - Emerald Primary with Soft Blue/Purple Accent */}
+            <Card className="group relative bg-gradient-to-br from-gray-300/95 via-emerald-50/90 to-gray-300/95 dark:from-gray-600 dark:via-gray-600/95 dark:to-gray-600 rounded-2xl shadow-lg hover:shadow-xl border-2 border-emerald-300/40 dark:border-emerald-600/30 p-5 sm:p-6 text-center sm:col-span-2 lg:col-span-1 transition-all duration-300 hover:brightness-105 hover:-translate-y-0.5 overflow-hidden">
+              {/* Subtle blue/purple accent glow */}
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-400/5 via-purple-400/5 to-transparent dark:from-blue-500/6 dark:via-purple-500/6 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="relative z-10">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 mx-auto mb-3 sm:mb-4 bg-gradient-to-br from-blue-200/60 to-purple-200/40 dark:from-blue-700/30 dark:to-purple-700/20 rounded-lg flex items-center justify-center shadow-md group-hover:shadow-lg transition-all duration-300 ring-1 ring-blue-400/25 dark:ring-blue-600/20">
+                  <Timer className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-800 dark:text-gray-100 mb-1.5 tracking-tight">
+                  <AnimatedCounter end={12} suffix={` ${t("common.min")}`} />
+                </div>
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 font-medium mt-2 uppercase tracking-wide">
+                  {t("stats.avg_prep_time")}
+                </p>
               </div>
-              <p className="text-sm sm:text-base text-purple-600 dark:text-purple-400 font-medium">🕐 {t("stats.avg_prep_time")}</p>
             </Card>
           </div>
         </div>
