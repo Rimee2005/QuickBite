@@ -1,8 +1,18 @@
-import nodemailer from 'nodemailer'
 import { IOrder } from './models/order'
+
+// Dynamically import nodemailer to handle cases where it might not be installed
+let nodemailer: any = null
+try {
+  nodemailer = require('nodemailer')
+} catch (error) {
+  console.warn('nodemailer not available. Email functionality will be disabled.')
+}
 
 // Create reusable transporter
 const createTransporter = () => {
+  if (!nodemailer) {
+    throw new Error('nodemailer is not installed')
+  }
   return nodemailer.createTransport({
     service: 'gmail',
     auth: {
@@ -25,9 +35,15 @@ export async function sendEmail({
   html: string
 }): Promise<void> {
   try {
+    // Check if nodemailer is available
+    if (!nodemailer) {
+      console.warn('nodemailer is not installed. Email not sent.')
+      return
+    }
+
     // Validate environment variables
     if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
-      console.error('Gmail credentials not configured. Email not sent.')
+      console.warn('Gmail credentials not configured. Email not sent.')
       return
     }
 
@@ -44,7 +60,8 @@ export async function sendEmail({
     console.log('Email sent successfully:', info.messageId)
   } catch (error: any) {
     console.error('Error sending email:', error)
-    throw new Error(`Failed to send email: ${error.message}`)
+    // Don't throw error, just log it so the order can still be placed
+    console.warn('Email sending failed, but order processing continues.')
   }
 }
 

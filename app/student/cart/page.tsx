@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
-import { Trash2, Plus, Minus, ArrowLeft, ShoppingBag, CreditCard, Clock } from "lucide-react"
+import { Trash2, Plus, Minus, ArrowLeft, ShoppingBag, CreditCard, Clock, Home } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
@@ -182,11 +182,23 @@ export default function CartPage() {
                 </p>
               </div>
             </div>
-            <div className="text-right flex-shrink-0">
-              <div className="text-2xl sm:text-3xl">🛒</div>
-              <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200 mt-1 text-xs">
-                {items.reduce((total, item) => total + item.quantity, 0)} {t("common.items")}
-              </Badge>
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              <Link href="/">
+                <Button
+                  variant="outline"
+                  className="border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:border-emerald-300 dark:hover:border-emerald-700 transition-all duration-300 hover:scale-105 shadow-sm hover:shadow-md px-3 sm:px-4"
+                >
+                  <Home className="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2" />
+                  <span className="hidden sm:inline">{t("login.back_home")}</span>
+                  <span className="sm:hidden">Home</span>
+                </Button>
+              </Link>
+              <div className="text-right flex-shrink-0">
+                <div className="text-2xl sm:text-3xl">🛒</div>
+                <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200 mt-1 text-xs">
+                  {items.reduce((total, item) => total + item.quantity, 0)} {t("common.items")}
+                </Badge>
+              </div>
             </div>
           </div>
         </div>

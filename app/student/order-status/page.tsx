@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
-import { Clock, CheckCircle, ChefHat, Bell, ArrowLeft, MapPin, Phone, Star } from "lucide-react"
+import { Clock, CheckCircle, ChefHat, Bell, ArrowLeft, MapPin, Phone, Star, Home } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
@@ -289,11 +289,24 @@ export default function OrderStatusPage() {
                 <p className="text-gray-600 dark:text-gray-300">{t("status.subtitle")}</p>
               </div>
             </div>
-            <div className="text-right">
-              <div className="text-4xl mb-2">{getStatusIcon()}</div>
-              <Badge className={`bg-gradient-to-r ${getStatusColor()} text-white border-0`}>
-                {status.charAt(0).toUpperCase() + status.slice(1)}
-              </Badge>
+            <div className="flex items-center space-x-3">
+              {(status === "pending" || status === "accepted" || status === "preparing" || status === "ready") && (
+                <Link href="/">
+                  <Button
+                    variant="outline"
+                    className="border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:border-emerald-300 dark:hover:border-emerald-700 transition-all duration-300 hover:scale-105 shadow-sm hover:shadow-md"
+                  >
+                    <Home className="w-5 h-5 mr-2" />
+                    {t("login.back_home")}
+                  </Button>
+                </Link>
+              )}
+              <div className="text-right">
+                <div className="text-4xl mb-2">{getStatusIcon()}</div>
+                <Badge className={`bg-gradient-to-r ${getStatusColor()} text-white border-0`}>
+                  {status.charAt(0).toUpperCase() + status.slice(1)}
+                </Badge>
+              </div>
             </div>
           </div>
         </div>

@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
-import { Search, Plus, Minus, ShoppingCart, LogOut, Menu, X } from "lucide-react"
+import { Search, Plus, Minus, ShoppingCart, LogOut, Menu, X, Home } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
@@ -165,7 +165,16 @@ export default function StudentDashboard() {
             </div>
 
             {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center space-x-4">
+            <div className="hidden md:flex items-center space-x-3">
+              <Link href="/">
+                <Button 
+                  variant="outline" 
+                  className="border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:border-emerald-300 dark:hover:border-emerald-700 transition-all duration-300 hover:scale-105 shadow-sm hover:shadow-md"
+                >
+                  <Home className="w-4 h-4 mr-2" />
+                  {t("login.back_home")}
+                </Button>
+              </Link>
               <Link href="/student/orders">
                 <Button variant="ghost" className="text-gray-600 dark:text-gray-300">
                   {t("dashboard.my_orders")}
@@ -209,6 +218,15 @@ export default function StudentDashboard() {
           {/* Mobile Menu */}
           {mobileMenuOpen && (
             <div className="md:hidden border-t border-gray-200 dark:border-gray-700 py-4 space-y-2">
+              <Link href="/" className="block">
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:border-emerald-300 dark:hover:border-emerald-700 transition-all duration-300"
+                >
+                  <Home className="w-4 h-4 mr-2" />
+                  {t("login.back_home")}
+                </Button>
+              </Link>
               <Link href="/student/orders" className="block">
                 <Button variant="ghost" className="w-full justify-start text-gray-600 dark:text-gray-300">
                   {t("dashboard.my_orders")}
