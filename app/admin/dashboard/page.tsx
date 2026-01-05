@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
-import { Check, Clock, Bell, LogOut, Settings, Menu, X, Wifi, WifiOff } from "lucide-react"
+import { Check, Clock, Bell, LogOut, Settings, Menu, X, Wifi, WifiOff, User } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useLanguage } from "@/contexts/language-context"
@@ -220,6 +220,12 @@ export default function AdminDashboard() {
                   {t("admin.manage_menu")}
                 </Button>
               </Link>
+              <Link href="/admin/profile">
+                <Button variant="ghost" className="text-gray-600 dark:text-gray-300">
+                  <User className="w-4 h-4 mr-2" />
+                  Account
+                </Button>
+              </Link>
               <Button variant="ghost" className="text-gray-600 dark:text-gray-300" onClick={handleLogout}>
                 <LogOut className="w-4 h-4 mr-2" />
                 {t("admin.logout")}
@@ -241,6 +247,12 @@ export default function AdminDashboard() {
                 <Button variant="ghost" className="w-full justify-start text-gray-600 dark:text-gray-300">
                   <Settings className="w-4 h-4 mr-2" />
                   {t("admin.manage_menu")}
+                </Button>
+              </Link>
+              <Link href="/admin/profile" className="block">
+                <Button variant="ghost" className="w-full justify-start text-gray-600 dark:text-gray-300">
+                  <User className="w-4 h-4 mr-2" />
+                  Account
                 </Button>
               </Link>
               <Button

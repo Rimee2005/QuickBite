@@ -58,10 +58,21 @@ export async function POST(req: NextRequest) {
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
 
-    // Determine folder based on user type or provided folder
-    const uploadFolder = folder || (session.user.type === 'admin' 
-      ? 'qickbite/menu-items' 
-      : 'qickbite/reviews')
+    // Determine folder based on provided folder or user type
+    let uploadFolder = folder
+    if (!uploadFolder) {
+      // Default folders based on user type
+      if (session.user.type === 'admin') {
+        uploadFolder = 'qickbite/menu-items'
+      } else {
+        uploadFolder = 'qickbite/reviews'
+      }
+    }
+    
+    // Allow profile images for both admin and student
+    if (uploadFolder === 'qickbite/profiles') {
+      // Profile images are allowed for all authenticated users
+    }
 
     // Upload to Cloudinary with the file's MIME type
     const result = await uploadImageToCloudinary(buffer, uploadFolder, file.type)

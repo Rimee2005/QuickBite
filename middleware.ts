@@ -23,12 +23,20 @@ export default withAuth(
   {
     callbacks: {
       authorized: ({ token, req }) => {
-        const isAdminRoute = req.nextUrl.pathname.startsWith("/admin")
-        const isStudentRoute = req.nextUrl.pathname.startsWith("/student")
-        const isAuthRoute = req.nextUrl.pathname.startsWith("/login") || 
-                          req.nextUrl.pathname.startsWith("/admin/login") ||
-                          req.nextUrl.pathname.startsWith("/admin/register") ||
-                          req.nextUrl.pathname.startsWith("/student/login")
+        const pathname = req.nextUrl.pathname
+        
+        // Always allow API routes (especially NextAuth routes)
+        if (pathname.startsWith("/api/")) {
+          return true
+        }
+
+        const isAdminRoute = pathname.startsWith("/admin")
+        const isStudentRoute = pathname.startsWith("/student")
+        const isAuthRoute = pathname.startsWith("/login") || 
+                          pathname.startsWith("/register") ||
+                          pathname.startsWith("/admin/login") ||
+                          pathname.startsWith("/admin/register") ||
+                          pathname.startsWith("/student/login")
 
         // Allow access to auth routes
         if (isAuthRoute) return true
@@ -45,10 +53,12 @@ export default withAuth(
 )
 
 // Update matcher to only include protected routes
+// Exclude API routes, especially NextAuth routes
 export const config = {
   matcher: [
     "/admin/:path*",
     "/student/:path*",
     "/login",
+    "/register",
   ],
 } 

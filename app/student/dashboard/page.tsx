@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
-import { Search, Plus, Minus, ShoppingCart, LogOut, Menu, X, Home } from "lucide-react"
+import { Search, Plus, Minus, ShoppingCart, LogOut, Menu, X, Home, User } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
@@ -191,6 +191,12 @@ export default function StudentDashboard() {
                   )}
                 </Button>
               </Link>
+              <Link href="/student/profile">
+                <Button variant="ghost" className="text-gray-600 dark:text-gray-300">
+                  <User className="w-4 h-4 mr-2" />
+                  Account
+                </Button>
+              </Link>
               <Button variant="ghost" className="text-gray-600 dark:text-gray-300" onClick={handleLogout}>
                 <LogOut className="w-4 h-4 mr-2" />
                 {t("dashboard.logout")}
@@ -230,6 +236,12 @@ export default function StudentDashboard() {
               <Link href="/student/orders" className="block">
                 <Button variant="ghost" className="w-full justify-start text-gray-600 dark:text-gray-300">
                   {t("dashboard.my_orders")}
+                </Button>
+              </Link>
+              <Link href="/student/profile" className="block">
+                <Button variant="ghost" className="w-full justify-start text-gray-600 dark:text-gray-300">
+                  <User className="w-4 h-4 mr-2" />
+                  Account
                 </Button>
               </Link>
               <Button

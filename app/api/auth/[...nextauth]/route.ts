@@ -21,7 +21,8 @@ export const authOptions: NextAuthOptions = {
         try {
           await connectToDatabase()
 
-          const user = await User.findOne({ email: credentials.email })
+          // Select password field explicitly since it's hidden by default
+          const user = await User.findOne({ email: credentials.email }).select('+password')
 
           if (!user) {
             console.error(`User not found for email: ${credentials.email}`)
