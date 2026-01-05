@@ -44,7 +44,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import { useTheme } from "next-themes"
 import { useLanguage } from "@/contexts/language-context"
 import { useToast } from "@/hooks/use-toast"
@@ -56,6 +56,36 @@ import { useToast } from "@/hooks/use-toast"
 // topPicks and dailySpecials will be defined inside component to use translations
 
 // Team members, fun facts, and FAQs will be defined inside component to use translations
+
+// Animated Star component for testimonials
+function AnimatedStar({ index, progress }: { index: number; progress: number }) {
+  const isFilled = progress >= index + 1
+  const isPartial = progress > index && progress < index + 1
+  const fillPercentage = isPartial ? (progress - index) * 100 : isFilled ? 100 : 0
+
+  return (
+    <div className="relative inline-block">
+      <Star 
+        className={`w-4 h-4 sm:w-5 sm:h-5 transition-all duration-300 ${
+          isFilled || isPartial 
+            ? 'text-yellow-400 fill-yellow-400 drop-shadow-[0_0_4px_rgba(250,204,21,0.6)]' 
+            : 'text-gray-300 dark:text-gray-600 fill-transparent'
+        }`}
+        style={{
+          filter: isFilled || isPartial ? 'drop-shadow(0 0 4px rgba(250, 204, 21, 0.6))' : 'none',
+        }}
+      />
+      {isPartial && (
+        <div 
+          className="absolute inset-0 overflow-hidden"
+          style={{ width: `${fillPercentage}%` }}
+        >
+          <Star className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400 fill-yellow-400" />
+        </div>
+      )}
+    </div>
+  )
+}
 
 // Animated counter component with smooth easing
 function AnimatedCounter({ end, duration = 2000, suffix = "" }: { end: number; duration?: number; suffix?: string }) {
@@ -95,14 +125,113 @@ function AnimatedCounter({ end, duration = 2000, suffix = "" }: { end: number; d
   )
 }
 
+// Component to animate numbers in fact text
+function AnimatedFactText({ text, isVisible }: { text: string; isVisible: boolean }) {
+  const [animatedText, setAnimatedText] = useState(text)
+
+  useEffect(() => {
+    if (!isVisible) {
+      setAnimatedText(text)
+      return
+    }
+
+    // Extract and animate numbers in the text
+    const numberRegex = /(\d+(?:,\d+)?(?:\.\d+)?)/g
+    const matches = text.match(numberRegex)
+    
+    if (matches) {
+      matches.forEach((numStr) => {
+        const num = parseInt(numStr.replace(/,/g, ''))
+        if (!isNaN(num) && num > 0) {
+          let current = 0
+          const increment = Math.max(1, Math.floor(num / 40))
+          const timer = setInterval(() => {
+            current += increment
+            if (current >= num) {
+              current = num
+              clearInterval(timer)
+            }
+            const formatted = num >= 1000 
+              ? Math.floor(current).toLocaleString()
+              : Math.floor(current).toString()
+            setAnimatedText((prev) => {
+              const regex = new RegExp(numStr.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')
+              return prev.replace(regex, formatted)
+            })
+          }, 30)
+          return () => clearInterval(timer)
+        }
+      })
+    }
+  }, [text, isVisible])
+
+  return <span>{animatedText}</span>
+}
+
 export default function LandingPage() {
   const [activeTestimonial, setActiveTestimonial] = useState(0)
+  const [testimonialAnimating, setTestimonialAnimating] = useState(false)
+  const [starProgress, setStarProgress] = useState(0)
+  const autoPlayRef = useRef<NodeJS.Timeout | null>(null)
   const [canteenOpen, setCanteenOpen] = useState(true)
   const [feedback, setFeedback] = useState("")
   const [selectedLanguage, setSelectedLanguage] = useState("en")
+  const [activeFactIndex, setActiveFactIndex] = useState(0)
+  const [heroLoaded, setHeroLoaded] = useState(false)
+  const [howItWorksVisible, setHowItWorksVisible] = useState(false)
+  const [featuresVisible, setFeaturesVisible] = useState(false)
+  const howItWorksRef = useRef<HTMLElement>(null)
+  const featuresRef = useRef<HTMLElement>(null)
   const { toast } = useToast()
   const { theme, setTheme } = useTheme()
   const { language, setLanguage, t } = useLanguage()
+
+  // Intersection Observer for How It Works section
+  useEffect(() => {
+    if (howItWorksRef.current && !howItWorksVisible) {
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting) {
+            setHowItWorksVisible(true)
+            observer.disconnect()
+          }
+        },
+        { threshold: 0.1 }
+      )
+      observer.observe(howItWorksRef.current)
+      return () => observer.disconnect()
+    }
+  }, [howItWorksVisible])
+
+  // Intersection Observer for Features section
+  useEffect(() => {
+    if (featuresRef.current && !featuresVisible) {
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting) {
+            setFeaturesVisible(true)
+            observer.disconnect()
+          }
+        },
+        { threshold: 0.1 }
+      )
+      observer.observe(featuresRef.current)
+      return () => observer.disconnect()
+    }
+  }, [featuresVisible])
+
+  // Trigger hero entrance animation on mount
+  useEffect(() => {
+    setHeroLoaded(true)
+  }, [])
+
+  // Auto-rotate fun facts every 7 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveFactIndex((prev) => (prev + 1) % 4)
+    }, 7000)
+    return () => clearInterval(interval)
+  }, [])
 
   // Memoize arrays to ensure they update when language changes
   const features = useMemo(() => [
@@ -334,26 +463,83 @@ export default function LandingPage() {
     },
   ], [t, language])
 
+  const changeTestimonial = (newIndex: number, skipAutoPlayReset = false) => {
+    // Clear auto-play when manually changing (unless it's auto-play itself)
+    if (!skipAutoPlayReset && autoPlayRef.current) {
+      clearInterval(autoPlayRef.current)
+      autoPlayRef.current = null
+    }
+    
+    setTestimonialAnimating(true)
+    setStarProgress(0)
+    setTimeout(() => {
+      setActiveTestimonial(newIndex)
+      setTimeout(() => {
+        setTestimonialAnimating(false)
+        // Animate stars filling up
+        const targetRating = testimonials[newIndex].rating
+        let current = 0
+        const interval = setInterval(() => {
+          current += 0.1
+          if (current >= targetRating) {
+            current = targetRating
+            clearInterval(interval)
+          }
+          setStarProgress(current)
+        }, 50)
+      }, 150)
+    }, 100)
+  }
+
   const nextTestimonial = () => {
-    setActiveTestimonial((prev) => (prev + 1) % testimonials.length)
+    changeTestimonial((activeTestimonial + 1) % testimonials.length)
   }
 
   const prevTestimonial = () => {
-    setActiveTestimonial((prev) => (prev - 1 + testimonials.length) % testimonials.length)
+    changeTestimonial((activeTestimonial - 1 + testimonials.length) % testimonials.length)
   }
 
-  // Auto-rotate testimonials and daily specials
+  // Auto-play testimonials every 7 seconds
   useEffect(() => {
-    const testimonialInterval = setInterval(nextTestimonial, 5000)
-    const specialInterval = setInterval(() => {
-      setActiveTestimonial((prev) => (prev + 1) % dailySpecials.length)
-    }, 3000)
+    // Clear existing interval
+    if (autoPlayRef.current) {
+      clearInterval(autoPlayRef.current)
+    }
+
+    // Start auto-play after initial load
+    const startTimer = setTimeout(() => {
+      autoPlayRef.current = setInterval(() => {
+        if (!testimonialAnimating) {
+          const nextIndex = (activeTestimonial + 1) % testimonials.length
+          changeTestimonial(nextIndex, true)
+        }
+      }, 7000)
+    }, 2000)
 
     return () => {
-      clearInterval(testimonialInterval)
-      clearInterval(specialInterval)
+      clearTimeout(startTimer)
+      if (autoPlayRef.current) {
+        clearInterval(autoPlayRef.current)
+        autoPlayRef.current = null
+      }
     }
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTestimonial, testimonialAnimating])
+
+  // Initialize star animation on mount
+  useEffect(() => {
+    const targetRating = testimonials[activeTestimonial].rating
+    let current = 0
+    const interval = setInterval(() => {
+      current += 0.1
+      if (current >= targetRating) {
+        current = targetRating
+        clearInterval(interval)
+      }
+      setStarProgress(current)
+    }, 50)
+    return () => clearInterval(interval)
+  }, [activeTestimonial, testimonials])
 
   // Check canteen status based on time
   useEffect(() => {
@@ -468,7 +654,7 @@ export default function LandingPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 mb-6 sm:mb-8">
         <div className="flex justify-center">
           <Badge
-            className={`text-sm sm:text-lg py-1.5 sm:py-2 px-4 sm:px-6 rounded-full ${
+            className={`text-sm sm:text-lg py-1.5 sm:py-2 px-4 sm:px-6 rounded-full animate-badge-pulse ${
               canteenOpen
                 ? "bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-900 dark:text-green-200"
                 : "bg-red-100 text-red-800 hover:bg-red-100 dark:bg-red-900 dark:text-red-200"
@@ -480,19 +666,30 @@ export default function LandingPage() {
       </div>
 
       {/* Hero Section */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 py-12 sm:py-16 lg:py-20">
-        <div className="grid lg:grid-cols-2 gap-8 sm:gap-12 items-center">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 py-12 sm:py-16 lg:py-20 relative overflow-hidden">
+        {/* Animated background gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-br from-emerald-50/0 via-emerald-100/0 to-white/0 dark:from-gray-900/0 dark:via-gray-800/0 dark:to-gray-800/0 animate-hero-gradient pointer-events-none" />
+        <div className="relative z-10">
+          <div className="grid lg:grid-cols-2 gap-8 sm:gap-12 items-center">
           <div className="space-y-6 sm:space-y-8 order-2 lg:order-1">
             <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-900 dark:text-emerald-200 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm">
               {t("hero.badge")}
             </Badge>
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gray-800 dark:text-white leading-tight">
+            <h1 className={`text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gray-800 dark:text-white leading-tight transition-all duration-700 ease-out ${
+              heroLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+            }`}>
               {t("hero.title")}
             </h1>
-            <p className="text-base sm:text-lg lg:text-xl text-gray-600 dark:text-gray-300 leading-relaxed">{t("hero.subtitle")}</p>
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+            <p className={`text-base sm:text-lg lg:text-xl text-gray-600 dark:text-gray-300 leading-relaxed transition-all duration-700 ease-out ${
+              heroLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+            }`} style={{ transitionDelay: heroLoaded ? '100ms' : '0ms' }}>
+              {t("hero.subtitle")}
+            </p>
+            <div className={`flex flex-col sm:flex-row gap-3 sm:gap-4 transition-all duration-700 ease-out ${
+              heroLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+            }`} style={{ transitionDelay: heroLoaded ? '200ms' : '0ms' }}>
               <Link href="/login" className="flex-1 sm:flex-initial">
-                <Button className="w-full sm:w-auto bg-emerald-400 hover:bg-emerald-500 text-white font-medium text-base sm:text-lg py-3 sm:py-4 px-6 sm:px-8 rounded-[1.25rem] transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                <Button className="w-full sm:w-auto bg-emerald-400 hover:bg-emerald-500 text-white font-medium text-base sm:text-lg py-3 sm:py-4 px-6 sm:px-8 rounded-[1.25rem] transition-all duration-300 ease-out shadow-lg hover:shadow-xl hover:-translate-y-1">
                   {t("hero.cta1")}
                   <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 ml-2" />
                 </Button>
@@ -500,7 +697,7 @@ export default function LandingPage() {
               <Link href="/admin/login" className="flex-1 sm:flex-initial">
                 <Button
                   variant="outline"
-                  className="w-full sm:w-auto text-base sm:text-lg py-3 sm:py-4 px-6 sm:px-8 rounded-[1.25rem] border-emerald-400 text-emerald-600 hover:bg-emerald-50 dark:border-emerald-500 dark:text-emerald-400 dark:hover:bg-emerald-950"
+                  className="w-full sm:w-auto text-base sm:text-lg py-3 sm:py-4 px-6 sm:px-8 rounded-[1.25rem] border-emerald-400 text-emerald-600 hover:bg-emerald-50 dark:border-emerald-500 dark:text-emerald-400 dark:hover:bg-emerald-950 transition-all duration-300 ease-out hover:-translate-y-1"
                 >
                   {t("hero.cta2")}
                 </Button>
@@ -508,11 +705,13 @@ export default function LandingPage() {
             </div>
 
             {/* Demo Order Button */}
-            <div className="pt-2 sm:pt-4">
+            <div className={`pt-2 sm:pt-4 transition-all duration-700 ease-out ${
+              heroLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+            }`} style={{ transitionDelay: heroLoaded ? '300ms' : '0ms' }}>
               <Button
                 variant="outline"
                 onClick={handleDemoOrder}
-                className="border-dashed border-2 border-gray-400 text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-800 text-sm sm:text-base py-2 sm:py-2.5 px-4 sm:px-6"
+                className="border-dashed border-2 border-gray-400 text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-800 text-sm sm:text-base py-2 sm:py-2.5 px-4 sm:px-6 transition-all duration-300 ease-out hover:-translate-y-1"
               >
                 <Play className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
                 {t("demo.title")}
@@ -521,11 +720,13 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <div className="relative order-1 lg:order-2">
-            <Card className="bg-white dark:bg-gray-800 rounded-[1.25rem] shadow-lg hover:shadow-xl transition-all duration-200 border border-gray-100 dark:border-gray-700 p-6 sm:p-8">
+          <div className={`relative order-1 lg:order-2 transition-all duration-700 ease-out ${
+            heroLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+          }`} style={{ transitionDelay: heroLoaded ? '400ms' : '0ms' }}>
+            <Card className="bg-white dark:bg-gray-800 rounded-[1.25rem] shadow-lg hover:shadow-xl transition-all duration-200 border border-gray-100 dark:border-gray-700 p-6 sm:p-8 animate-card-float">
               <div className="space-y-4 sm:space-y-6">
                 <div className="flex items-center space-x-3 sm:space-x-4">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-100 dark:bg-emerald-900 rounded-full flex items-center justify-center flex-shrink-0">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-100 dark:bg-emerald-900 rounded-full flex items-center justify-center flex-shrink-0 animate-icon-bounce">
                     <span className="text-xl sm:text-2xl">👥</span>
                   </div>
                   <div>
@@ -536,7 +737,7 @@ export default function LandingPage() {
 
                 <div className="border-l-4 border-emerald-400 pl-4 sm:pl-6 ml-3 sm:ml-6">
                   <div className="flex items-center space-x-3 sm:space-x-4">
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-400 rounded-full flex items-center justify-center flex-shrink-0">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-400 rounded-full flex items-center justify-center flex-shrink-0 animate-icon-bounce-delayed">
                       <span className="text-xl sm:text-2xl">😊</span>
                     </div>
                     <div>
@@ -558,11 +759,12 @@ export default function LandingPage() {
               </div>
             </div>
           </div>
+          </div>
         </div>
       </section>
 
       {/* Canteen Location Map */}
-      <section className="bg-gradient-to-b from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 py-10 sm:py-12 transition-colors duration-300">
+      <section className="bg-gradient-to-b from-gray-50 to-white dark:from-gray-700 dark:to-gray-800 py-10 sm:py-12 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-6 sm:mb-8">
             <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white mb-2 sm:mb-3">{t("location.title")} 📍</h2>
@@ -634,7 +836,7 @@ export default function LandingPage() {
       </section>
 
       {/* Live Stats Section */}
-      <section className="py-10 sm:py-12 bg-slate-300 dark:bg-slate-800 transition-colors duration-300">
+      <section className="py-10 sm:py-12 bg-[#ECFDF5] dark:bg-slate-800 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-8 sm:mb-10">
             <div className="flex items-center justify-center gap-3 mb-3 flex-wrap">
@@ -649,8 +851,8 @@ export default function LandingPage() {
           </div>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 lg:gap-6">
-            {/* Total Orders Card - Muted Emerald */}
-            <Card className="group bg-emerald-700 dark:bg-emerald-800 rounded-2xl shadow-md hover:shadow-lg border-0 p-5 sm:p-6 text-center transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02]">
+            {/* Total Orders Card - Fresh Modern Green */}
+            <Card className="group bg-[#10B981] dark:bg-emerald-800 rounded-2xl shadow-md hover:shadow-lg border-0 p-5 sm:p-6 text-center transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02]">
               <div className="w-12 h-12 sm:w-14 sm:h-14 mx-auto mb-3 sm:mb-4 rounded-lg flex items-center justify-center">
                 <TrendingUp className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
               </div>
@@ -662,8 +864,8 @@ export default function LandingPage() {
               </p>
             </Card>
 
-            {/* Active Admins Card - Warm Orange-Red */}
-            <Card className="group bg-[#ff6b35] dark:bg-[#e55a2b] rounded-2xl shadow-md hover:shadow-lg border-0 p-5 sm:p-6 text-center transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02]">
+            {/* Active Admins Card - Soft Muted Orange */}
+            <Card className="group bg-[#FB923C] dark:bg-[#e55a2b] rounded-2xl shadow-md hover:shadow-lg border-0 p-5 sm:p-6 text-center transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02]">
               <div className="w-12 h-12 sm:w-14 sm:h-14 mx-auto mb-3 sm:mb-4 rounded-lg flex items-center justify-center">
                 <Users className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
               </div>
@@ -675,8 +877,8 @@ export default function LandingPage() {
               </p>
             </Card>
 
-            {/* Avg Prep Time Card - Muted Blue */}
-            <Card className="group bg-blue-700 dark:bg-blue-800 rounded-2xl shadow-md hover:shadow-lg border-0 p-5 sm:p-6 text-center sm:col-span-2 lg:col-span-1 transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02]">
+            {/* Avg Prep Time Card - Clean Modern Blue */}
+            <Card className="group bg-[#2563EB] dark:bg-blue-800 rounded-2xl shadow-md hover:shadow-lg border-0 p-5 sm:p-6 text-center sm:col-span-2 lg:col-span-1 transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02]">
               <div className="w-12 h-12 sm:w-14 sm:h-14 mx-auto mb-3 sm:mb-4 rounded-lg flex items-center justify-center">
                 <Timer className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
               </div>
@@ -750,7 +952,7 @@ export default function LandingPage() {
                   ) : (
                     <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center">
                       <span className="text-5xl sm:text-6xl">{dish.emoji}</span>
-                    </div>
+                  </div>
                   )}
                   {/* Gradient overlay for better text readability */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
@@ -775,11 +977,11 @@ export default function LandingPage() {
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-baseline gap-2">
                       <span className="text-2xl sm:text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">₹{dish.price}</span>
-                      {dish.offer && (
+                    {dish.offer && (
                         <span className="text-sm text-gray-500 dark:text-gray-400 line-through">
-                          ₹{Math.round(dish.price / (1 - Number.parseInt(dish.offer) / 100))}
-                        </span>
-                      )}
+                        ₹{Math.round(dish.price / (1 - Number.parseInt(dish.offer) / 100))}
+                      </span>
+                    )}
                     </div>
                   </div>
                   <Link href="/login">
@@ -799,38 +1001,269 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="grid sm:grid-cols-2 gap-6 sm:gap-8">
             {/* Group Order */}
-            <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900 dark:to-blue-800 rounded-[1.25rem] shadow-lg border-0 p-6 sm:p-8">
-              <div className="text-center">
-                <UsersIcon className="w-12 h-12 sm:w-16 sm:h-16 text-blue-600 dark:text-blue-400 mx-auto mb-3 sm:mb-4" />
+            <Card className="group relative rounded-[1.25rem] shadow-lg border border-blue-200/50 dark:border-blue-700/50 p-6 sm:p-8 transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl overflow-hidden">
+              {/* Base background gradient */}
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-blue-100 to-blue-200 dark:from-blue-900 dark:via-blue-800 dark:to-blue-700" />
+              {/* Idle animated gradient layer */}
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-100 via-blue-200 to-blue-50 dark:from-blue-800 dark:via-blue-700 dark:to-blue-900 animate-gradient-idle" />
+              {/* Hover gradient shift */}
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-200 via-blue-50 to-blue-100 dark:from-blue-700 dark:via-blue-900 dark:to-blue-800 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              {/* Soft inner border */}
+              <div className="absolute inset-[1px] rounded-[1.2rem] border border-blue-300/30 dark:border-blue-600/30 pointer-events-none" />
+              <div className="relative z-10 flex flex-col justify-center items-center text-center min-h-[280px] sm:min-h-[320px]">
+                <div className="animate-pulse-slow mb-4 sm:mb-5">
+                  <UsersIcon className="w-16 h-16 sm:w-20 sm:h-20 text-blue-600 dark:text-blue-400 mx-auto" />
+                </div>
                 <h3 className="text-xl sm:text-2xl font-bold text-blue-800 dark:text-blue-200 mb-3 sm:mb-4">{t("group.title")}</h3>
                 <p className="text-sm sm:text-base text-blue-700 dark:text-blue-300 mb-4 sm:mb-6">{t("group.subtitle")}</p>
                 <Button
                   onClick={handleGroupOrder}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 sm:py-3 px-5 sm:px-6 rounded-[1.25rem] text-sm sm:text-base"
+                  className="relative bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 sm:py-3 px-5 sm:px-6 rounded-[1.25rem] text-sm sm:text-base transition-all duration-300 hover:scale-105 group/btn overflow-visible"
                 >
-                  {t("group.cta")}
+                  <span className="absolute -inset-1 rounded-[1.25rem] bg-blue-400 opacity-0 group-hover/btn:opacity-30 blur-md transition-opacity duration-300" />
+                  <span className="relative z-10">{t("group.cta")}</span>
                 </Button>
               </div>
             </Card>
 
             {/* Loyalty Program */}
-            <Card className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900 dark:to-purple-800 rounded-[1.25rem] shadow-lg border-0 p-6 sm:p-8">
-              <div className="text-center">
-                <Gift className="w-12 h-12 sm:w-16 sm:h-16 text-purple-600 dark:text-purple-400 mx-auto mb-3 sm:mb-4" />
-                <h3 className="text-xl sm:text-2xl font-bold text-purple-800 dark:text-purple-200 mb-3 sm:mb-4">{t("loyalty.program")} 🎁</h3>
-                <p className="text-sm sm:text-base text-purple-700 dark:text-purple-300 mb-4 sm:mb-6">{t("loyalty.title")}</p>
+            <Card className="group relative rounded-[1.25rem] shadow-lg border border-orange-200/50 dark:border-orange-700/50 p-6 sm:p-8 transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl overflow-hidden">
+              {/* Base background gradient */}
+              <div className="absolute inset-0 bg-gradient-to-br from-orange-100 via-[#ff6b35] to-orange-600 dark:from-orange-900 dark:via-[#e55a2b] dark:to-orange-800" />
+              {/* Idle animated gradient layer */}
+              <div className="absolute inset-0 bg-gradient-to-br from-[#ff6b35] via-orange-200 to-orange-100 dark:from-[#e55a2b] dark:via-orange-700 dark:to-orange-900 animate-gradient-idle" />
+              {/* Hover gradient shift */}
+              <div className="absolute inset-0 bg-gradient-to-br from-orange-200 via-[#ff6b35] to-orange-100 dark:from-orange-700 dark:via-[#e55a2b] dark:to-orange-800 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              {/* Soft inner border */}
+              <div className="absolute inset-[1px] rounded-[1.2rem] border border-orange-300/30 dark:border-orange-600/30 pointer-events-none" />
+              <div className="relative z-10 flex flex-col justify-center items-center text-center min-h-[280px] sm:min-h-[320px]">
+                <div className="animate-pulse-slow mb-4 sm:mb-5">
+                  <Gift className="w-16 h-16 sm:w-20 sm:h-20 text-white dark:text-orange-200 mx-auto" />
+                </div>
+                <h3 className="text-xl sm:text-2xl font-bold text-white dark:text-orange-100 mb-3 sm:mb-4">{t("loyalty.program")} 🎁</h3>
+                <p className="text-sm sm:text-base text-white/90 dark:text-orange-200/90 mb-4 sm:mb-6">{t("loyalty.title")}</p>
                 <div className="flex items-center justify-center space-x-2 mb-3 sm:mb-4">
-                  <div className="w-7 h-7 sm:w-8 sm:h-8 bg-purple-600 rounded-full flex items-center justify-center text-white font-bold text-sm sm:text-base">
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 bg-white/30 dark:bg-white/20 rounded-full flex items-center justify-center text-white font-bold text-sm sm:text-base">
                     1
                   </div>
-                  <span className="text-sm sm:text-base text-purple-700 dark:text-purple-300">{t("loyalty.order_point")}</span>
+                  <span className="text-sm sm:text-base text-white/90 dark:text-orange-200/90">{t("loyalty.order_point")}</span>
                 </div>
-                <Badge className="bg-purple-600 text-white text-xs sm:text-sm">{t("loyalty.coming_soon")}</Badge>
+                <Badge className="bg-white/30 dark:bg-white/20 text-white text-xs sm:text-sm relative backdrop-blur-sm">
+                  {t("loyalty.coming_soon")}
+                  <span className="ml-1 inline-flex">
+                    <span className="animate-dot-1">.</span>
+                    <span className="animate-dot-2">.</span>
+                    <span className="animate-dot-3">.</span>
+                  </span>
+                </Badge>
               </div>
             </Card>
           </div>
         </div>
       </section>
+
+      <style jsx>{`
+        @keyframes gradient-idle {
+          0%, 100% {
+            opacity: 0.3;
+          }
+          50% {
+            opacity: 0.6;
+          }
+        }
+        .animate-gradient-idle {
+          animation: gradient-idle 12s ease-in-out infinite;
+        }
+        @keyframes pulse-slow {
+          0%, 100% {
+            transform: scale(1);
+            opacity: 1;
+          }
+          50% {
+            transform: scale(1.05);
+            opacity: 0.9;
+          }
+        }
+        .animate-pulse-slow {
+          animation: pulse-slow 3s ease-in-out infinite;
+        }
+        @keyframes dot-1 {
+          0%, 20% {
+            opacity: 0;
+          }
+          50% {
+            opacity: 1;
+          }
+          100% {
+            opacity: 0;
+          }
+        }
+        @keyframes dot-2 {
+          0%, 40% {
+            opacity: 0;
+          }
+          60% {
+            opacity: 1;
+          }
+          100% {
+            opacity: 0;
+          }
+        }
+        @keyframes dot-3 {
+          0%, 60% {
+            opacity: 0;
+          }
+          80% {
+            opacity: 1;
+          }
+          100% {
+            opacity: 0;
+          }
+        }
+        .animate-dot-1 {
+          animation: dot-1 1.5s ease-in-out infinite;
+        }
+        .animate-dot-2 {
+          animation: dot-2 1.5s ease-in-out infinite;
+        }
+        .animate-dot-3 {
+          animation: dot-3 1.5s ease-in-out infinite;
+        }
+        @keyframes gradient-shift-orange {
+          0%, 100% {
+            opacity: 0.3;
+            transform: translateX(0) translateY(0) scale(1);
+          }
+          25% {
+            opacity: 0.5;
+            transform: translateX(-1.5%) translateY(-0.5%) scale(1.02);
+          }
+          50% {
+            opacity: 0.4;
+            transform: translateX(0) translateY(-1%) scale(1);
+          }
+          75% {
+            opacity: 0.6;
+            transform: translateX(1.5%) translateY(-0.5%) scale(1.02);
+          }
+        }
+        .animate-gradient-shift-orange {
+          animation: gradient-shift-orange 10s ease-in-out infinite;
+        }
+        @keyframes arrow-glow {
+          0%, 100% {
+            opacity: 0.6;
+            transform: translateX(0) translateY(-50%);
+          }
+          50% {
+            opacity: 1;
+            transform: translateX(4px) translateY(-50%);
+          }
+        }
+        .animate-arrow-glow {
+          animation: arrow-glow 2s ease-in-out infinite;
+          transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
+        }
+        @keyframes float-gentle {
+          0%, 100% {
+            transform: translateY(0px);
+          }
+          50% {
+            transform: translateY(-6px);
+          }
+        }
+        .animate-float-gentle {
+          animation: float-gentle 3s ease-in-out infinite;
+        }
+        @keyframes pulse-dot {
+          0%, 100% {
+            transform: scale(1);
+            opacity: 1;
+          }
+          50% {
+            transform: scale(1.2);
+            opacity: 0.8;
+          }
+        }
+        .animate-pulse-dot {
+          animation: pulse-dot 2s ease-in-out infinite;
+        }
+        @keyframes hero-gradient {
+          0% {
+            background-position: 0% 0%;
+            opacity: 0.2;
+          }
+          25% {
+            background-position: 50% 25%;
+            opacity: 0.3;
+          }
+          50% {
+            background-position: 100% 50%;
+            opacity: 0.25;
+          }
+          75% {
+            background-position: 50% 75%;
+            opacity: 0.3;
+          }
+          100% {
+            background-position: 0% 100%;
+            opacity: 0.2;
+          }
+        }
+        .animate-hero-gradient {
+          background-size: 200% 200%;
+          animation: hero-gradient 18s ease-in-out infinite;
+        }
+        @keyframes badge-pulse {
+          0%, 100% {
+            transform: scale(1);
+            opacity: 1;
+          }
+          50% {
+            transform: scale(1.02);
+            opacity: 0.95;
+          }
+        }
+        .animate-badge-pulse {
+          animation: badge-pulse 3s ease-in-out infinite;
+        }
+        @keyframes card-float {
+          0%, 100% {
+            transform: translateY(0px);
+          }
+          50% {
+            transform: translateY(-8px);
+          }
+        }
+        .animate-card-float {
+          animation: card-float 4s ease-in-out infinite;
+        }
+        @keyframes icon-bounce {
+          0%, 100% {
+            transform: translateY(0px) scale(1);
+            opacity: 1;
+          }
+          25% {
+            transform: translateY(-4px) scale(1.05);
+            opacity: 0.9;
+          }
+          50% {
+            transform: translateY(0px) scale(1);
+            opacity: 1;
+          }
+          75% {
+            transform: translateY(-2px) scale(1.02);
+            opacity: 0.95;
+          }
+        }
+        .animate-icon-bounce {
+          animation: icon-bounce 3s ease-in-out infinite;
+        }
+        .animate-icon-bounce-delayed {
+          animation: icon-bounce 3s ease-in-out infinite;
+          animation-delay: 1.5s;
+        }
+      `}</style>
 
       {/* Fun Facts Section */}
       <section className="py-12 sm:py-16 lg:py-20 bg-gradient-to-br from-emerald-50 to-white dark:from-gray-900 dark:to-gray-800 transition-colors duration-300">
@@ -841,19 +1274,72 @@ export default function LandingPage() {
           </div>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-            {funFacts.map((fact, index) => (
+            {funFacts.map((fact, index) => {
+              const isActive = index === activeFactIndex
+              return (
               <Card
                 key={index}
-                className="bg-white dark:bg-gray-800 rounded-[1.25rem] shadow-lg hover:shadow-xl transition-all duration-200 border border-gray-100 dark:border-gray-700 p-4 sm:p-6 text-center"
-              >
-                <div className="text-3xl sm:text-4xl mb-3 sm:mb-4">{fact.emoji}</div>
-                <div className="flex justify-center mb-2 sm:mb-3">{fact.icon}</div>
-                <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300 font-medium">{fact.fact}</p>
+                  className="group relative bg-white dark:bg-gray-800 rounded-[1.25rem] shadow-lg hover:shadow-2xl transition-all duration-500 border border-gray-100 dark:border-gray-700 p-4 sm:p-6 text-center overflow-hidden hover:-translate-y-2 hover:scale-[1.02]"
+                  style={{
+                    opacity: isActive ? 1 : 0.75,
+                    transform: isActive ? 'scale(1) translateY(0)' : 'scale(0.97) translateY(0)',
+                    transition: 'opacity 0.6s ease-in-out, transform 0.6s ease-in-out',
+                  }}
+                >
+                  {/* Soft glow on hover */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-emerald-100/0 to-blue-100/0 dark:from-emerald-900/0 dark:to-blue-900/0 group-hover:from-emerald-100/20 group-hover:to-blue-100/20 dark:group-hover:from-emerald-900/20 dark:group-hover:to-blue-900/20 transition-all duration-500 rounded-[1.25rem] pointer-events-none" />
+                  
+                  <div className="relative z-10">
+                    {/* Emoji with floating animation */}
+                    <div className="text-3xl sm:text-4xl mb-3 sm:mb-4 animate-float-slow">{fact.emoji}</div>
+                    
+                    {/* Icon with pulsing animation */}
+                    <div className="flex justify-center mb-2 sm:mb-3 animate-pulse-gentle">
+                      {fact.icon}
+                    </div>
+                    
+                    {/* Fact text with animated numbers */}
+                    <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300 font-medium group-hover:text-gray-900 dark:group-hover:text-white transition-colors duration-300">
+                      {isActive ? (
+                        <AnimatedFactText text={fact.fact} isVisible={isActive} />
+                      ) : (
+                        fact.fact
+                      )}
+                    </p>
+                  </div>
               </Card>
-            ))}
+              )
+            })}
           </div>
         </div>
       </section>
+
+      <style jsx>{`
+        @keyframes float-slow {
+          0%, 100% {
+            transform: translateY(0px);
+          }
+          50% {
+            transform: translateY(-8px);
+          }
+        }
+        .animate-float-slow {
+          animation: float-slow 3s ease-in-out infinite;
+        }
+        @keyframes pulse-gentle {
+          0%, 100% {
+            transform: scale(1);
+            opacity: 1;
+          }
+          50% {
+            transform: scale(1.1);
+            opacity: 0.9;
+          }
+        }
+        .animate-pulse-gentle {
+          animation: pulse-gentle 2.5s ease-in-out infinite;
+        }
+      `}</style>
 
       {/* Live Feedback Section */}
       <section className="bg-white dark:bg-gray-800 py-12 sm:py-16 lg:py-20 transition-colors duration-300">
@@ -919,32 +1405,94 @@ export default function LandingPage() {
       <section className="py-12 sm:py-16 lg:py-20 bg-gradient-to-br from-emerald-50 to-white dark:from-gray-900 dark:to-gray-800 transition-colors duration-300">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-10 sm:mb-16">
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 dark:text-white mb-3 sm:mb-4">{t("dashboard_preview.title")} 📊</h2>
+            <div className="flex items-center justify-center gap-3 mb-3 sm:mb-4 flex-wrap">
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 dark:text-white">{t("dashboard_preview.title")} 📊</h2>
+              {/* Enhanced Pulsing Live Indicator */}
+              <div className="flex items-center gap-1.5 px-2.5 py-1 bg-red-50/90 dark:bg-red-950/50 rounded-full border border-red-200/70 dark:border-red-900/60 shadow-sm hover:shadow-md transition-shadow duration-300">
+                <div className="relative">
+                  <Circle className="w-1.5 h-1.5 fill-red-400 text-red-400 animate-pulse" />
+                  <div className="absolute inset-0 w-1.5 h-1.5 bg-red-400 rounded-full animate-ping opacity-75" />
+                </div>
+                <span className="text-xs font-semibold text-red-600 dark:text-red-400 tracking-wide">LIVE</span>
+              </div>
+            </div>
             <p className="text-base sm:text-lg lg:text-xl text-gray-600 dark:text-gray-300">{t("dashboard_preview.subtitle")}</p>
           </div>
 
-          <Card className="bg-white dark:bg-gray-800 rounded-[1.25rem] shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden">
-            <div className="bg-gray-100 dark:bg-gray-700 p-3 sm:p-4 border-b border-gray-200 dark:border-gray-600">
+          <Card className="bg-white dark:bg-gray-800 rounded-[1.25rem] shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden hover:shadow-2xl transition-shadow duration-300">
+            <div className="bg-gradient-to-r from-gray-100 to-gray-50 dark:from-gray-700 dark:to-gray-800 p-3 sm:p-4 border-b border-gray-200 dark:border-gray-600">
               <div className="flex items-center space-x-2">
-                <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-red-500 rounded-full"></div>
-                <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-yellow-500 rounded-full"></div>
-                <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-green-500 rounded-full"></div>
-                <span className="ml-2 sm:ml-4 text-xs sm:text-sm text-gray-600 dark:text-gray-300">{t("dashboard_preview.admin_dashboard")}</span>
+                <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-red-500 rounded-full shadow-sm"></div>
+                <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-yellow-500 rounded-full shadow-sm"></div>
+                <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-green-500 rounded-full shadow-sm"></div>
+                <span className="ml-2 sm:ml-4 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">{t("dashboard_preview.admin_dashboard")}</span>
               </div>
             </div>
             <div className="p-4 sm:p-6 lg:p-8">
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
-                <Card className="bg-emerald-50 dark:bg-emerald-900 border border-emerald-200 dark:border-emerald-700 p-3 sm:p-4 text-center">
-                  <div className="text-xl sm:text-2xl font-bold text-emerald-700 dark:text-emerald-300">12</div>
-                  <p className="text-emerald-600 dark:text-emerald-400 text-xs sm:text-sm">{t("dashboard_preview.pending_orders")}</p>
+                {/* Pending Orders Card - Green */}
+                <Card className="group bg-emerald-50 dark:bg-emerald-900 border border-emerald-200 dark:border-emerald-700 p-3 sm:p-4 text-center relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:scale-[1.02] hover:border-emerald-300 dark:hover:border-emerald-600">
+                  <div className="flex items-center justify-center mb-2 sm:mb-3">
+                    <div className="p-2 rounded-lg bg-emerald-100/50 dark:bg-emerald-800/50 group-hover:bg-emerald-200/70 dark:group-hover:bg-emerald-700/70 transition-colors duration-300">
+                      <ShoppingCart className="w-6 h-6 sm:w-7 sm:h-7 text-emerald-600 dark:text-emerald-400" strokeWidth={2.5} />
+                    </div>
+                  </div>
+                  <div className="relative">
+                    {/* Enhanced soft glow behind number */}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="w-20 h-20 sm:w-24 sm:h-24 bg-emerald-200/40 dark:bg-emerald-700/40 rounded-full blur-xl opacity-70 group-hover:opacity-90 transition-opacity duration-300" />
+                    </div>
+                    <div className="text-xl sm:text-2xl font-bold text-emerald-700 dark:text-emerald-300 relative z-10 drop-shadow-sm">
+                      <AnimatedCounter end={12} />
+                    </div>
+                  </div>
+                  <p className="text-emerald-600 dark:text-emerald-400 text-xs sm:text-sm mt-2 font-medium">{t("dashboard_preview.pending_orders")}</p>
                 </Card>
-                <Card className="bg-blue-50 dark:bg-blue-900 border border-blue-200 dark:border-blue-700 p-3 sm:p-4 text-center">
-                  <div className="text-xl sm:text-2xl font-bold text-blue-700 dark:text-blue-300">8 {t("common.min")}</div>
-                  <p className="text-blue-600 dark:text-blue-400 text-xs sm:text-sm">{t("dashboard_preview.avg_wait")}</p>
+                
+                {/* Avg Wait Time Card - Blue */}
+                <Card className="group bg-blue-50 dark:bg-blue-900 border border-blue-200 dark:border-blue-700 p-3 sm:p-4 text-center relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:scale-[1.02] hover:border-blue-300 dark:hover:border-blue-600">
+                  <div className="flex items-center justify-center mb-2 sm:mb-3">
+                    <div className="p-2 rounded-lg bg-blue-100/50 dark:bg-blue-800/50 group-hover:bg-blue-200/70 dark:group-hover:bg-blue-700/70 transition-colors duration-300">
+                      <Timer className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600 dark:text-blue-400" strokeWidth={2.5} />
+                    </div>
+                  </div>
+                  <div className="relative">
+                    {/* Enhanced soft glow behind number */}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="w-20 h-20 sm:w-24 sm:h-24 bg-blue-200/40 dark:bg-blue-700/40 rounded-full blur-xl opacity-70 group-hover:opacity-90 transition-opacity duration-300" />
+                    </div>
+                    <div className="text-xl sm:text-2xl font-bold text-blue-700 dark:text-blue-300 relative z-10 drop-shadow-sm">
+                      <AnimatedCounter end={8} suffix={` ${t("common.min")}`} />
+                    </div>
+                  </div>
+                  <p className="text-blue-600 dark:text-blue-400 text-xs sm:text-sm mt-2 font-medium">{t("dashboard_preview.avg_wait")}</p>
                 </Card>
-                <Card className="bg-purple-50 dark:bg-purple-900 border border-purple-200 dark:border-purple-700 p-3 sm:p-4 text-center sm:col-span-2 lg:col-span-1">
-                  <div className="text-xl sm:text-2xl font-bold text-purple-700 dark:text-purple-300">3</div>
-                  <p className="text-purple-600 dark:text-purple-400 text-xs sm:text-sm">{t("dashboard_preview.active_admins")}</p>
+                
+                {/* Active Admins Card - Light Orange Gradient */}
+                <Card className="group relative border-0 p-3 sm:p-4 text-center sm:col-span-2 lg:col-span-1 overflow-hidden transition-all duration-300 hover:shadow-xl hover:scale-[1.02]">
+                  {/* Base gradient background - lighter orange */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-orange-200 via-orange-300 to-orange-400 dark:from-orange-500 dark:via-orange-600 dark:to-red-500" />
+                  {/* Animated gradient overlay - lighter shades */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-orange-300 via-orange-400 to-red-400 dark:from-orange-600 dark:via-orange-700 dark:to-red-600 animate-gradient-shift-orange" />
+                  {/* Subtle shine effect */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <div className="relative z-10">
+                    <div className="flex items-center justify-center mb-2 sm:mb-3">
+                      <div className="p-2 rounded-lg bg-white/20 dark:bg-white/10 group-hover:bg-white/30 dark:group-hover:bg-white/20 transition-colors duration-300 backdrop-blur-sm">
+                        <Users className="w-6 h-6 sm:w-7 sm:h-7 text-white drop-shadow-md" strokeWidth={2.5} />
+                      </div>
+                    </div>
+                    <div className="relative">
+                      {/* Enhanced soft glow behind number */}
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-20 h-20 sm:w-24 sm:h-24 bg-white/30 rounded-full blur-xl opacity-70 group-hover:opacity-90 transition-opacity duration-300" />
+                      </div>
+                      <div className="text-xl sm:text-2xl font-bold text-white relative z-10 drop-shadow-md">
+                        <AnimatedCounter end={3} />
+                      </div>
+                    </div>
+                    <p className="text-white/95 text-xs sm:text-sm mt-2 font-medium drop-shadow-sm">{t("dashboard_preview.active_admins")}</p>
+                  </div>
                 </Card>
               </div>
 
@@ -985,7 +1533,10 @@ export default function LandingPage() {
       </section>
 
       {/* How It Works Section */}
-      <section className="bg-white dark:bg-gray-800 py-12 sm:py-16 lg:py-20 transition-colors duration-300">
+      <section 
+        ref={howItWorksRef}
+        className="bg-white dark:bg-gray-800 py-12 sm:py-16 lg:py-20 transition-colors duration-300"
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-10 sm:mb-16">
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 dark:text-white mb-3 sm:mb-4">{t("how_it_works.title")} 🔍</h2>
@@ -995,17 +1546,40 @@ export default function LandingPage() {
           <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6 lg:gap-8">
             {steps.map((step, index) => (
               <div key={step.number} className="relative">
-                <Card className="bg-white dark:bg-gray-700 rounded-[1.25rem] shadow-lg hover:shadow-xl transition-all duration-200 border border-gray-100 dark:border-gray-600 p-4 sm:p-6 text-center h-full">
-                  <div className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 bg-emerald-100 dark:bg-emerald-900 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                <Card 
+                  className={`group bg-white dark:bg-gray-700 rounded-[1.25rem] shadow-lg hover:shadow-2xl transition-all duration-500 border border-gray-100 dark:border-gray-600 p-4 sm:p-6 text-center h-full hover:-translate-y-2 hover:scale-[1.02] ${
+                    howItWorksVisible 
+                      ? 'opacity-100 translate-x-0' 
+                      : 'opacity-0 -translate-x-8'
+                  }`}
+                  style={{
+                    transitionDelay: howItWorksVisible ? `${index * 150}ms` : '0ms',
+                  }}
+                >
+                  {/* Soft glow on hover */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-emerald-100/0 to-emerald-200/0 dark:from-emerald-900/0 dark:to-emerald-800/0 group-hover:from-emerald-100/20 group-hover:to-emerald-200/20 dark:group-hover:from-emerald-900/20 dark:group-hover:to-emerald-800/20 transition-all duration-500 rounded-[1.25rem] pointer-events-none" />
+                  
+                  <div className="relative z-10">
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 bg-emerald-100 dark:bg-emerald-900 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4 animate-pulse-gentle">
                     <div className="text-emerald-600 dark:text-emerald-400 scale-75 sm:scale-100">{step.icon}</div>
                   </div>
                   <div className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400 mb-2">{step.number}</div>
-                  <h3 className="font-semibold text-gray-800 dark:text-white mb-2 text-sm sm:text-base">{step.title}</h3>
+                    <h3 className="font-semibold text-gray-800 dark:text-white mb-2 text-sm sm:text-base group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors duration-300">{step.title}</h3>
                   <p className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm">{step.description}</p>
+                  </div>
                 </Card>
                 {index < steps.length - 1 && (
-                  <div className="hidden lg:block absolute top-1/2 -right-4 transform -translate-y-1/2">
-                    <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-400" />
+                  <div 
+                    className={`hidden lg:block absolute top-1/2 -right-4 transform -translate-y-1/2 animate-arrow-glow ${
+                      howItWorksVisible 
+                        ? 'opacity-100 translate-x-0' 
+                        : 'opacity-0 -translate-x-4'
+                    }`}
+                    style={{
+                      transitionDelay: howItWorksVisible ? `${(index + 1) * 150}ms` : '0ms',
+                    }}
+                  >
+                    <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-400 drop-shadow-lg" />
                   </div>
                 )}
               </div>
@@ -1015,7 +1589,10 @@ export default function LandingPage() {
       </section>
 
       {/* Features Section */}
-      <section className="py-12 sm:py-16 lg:py-20 bg-gradient-to-br from-emerald-50 to-white dark:from-gray-900 dark:to-gray-800 transition-colors duration-300">
+      <section 
+        ref={featuresRef}
+        className="py-12 sm:py-16 lg:py-20 bg-gradient-to-br from-emerald-50 to-white dark:from-gray-900 dark:to-gray-800 transition-colors duration-300"
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-10 sm:mb-16">
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 dark:text-white mb-3 sm:mb-4">{t("features.title")} 📦</h2>
@@ -1028,11 +1605,25 @@ export default function LandingPage() {
             {features.map((feature, index) => (
               <Card
                 key={index}
-                className="bg-white dark:bg-gray-700 rounded-[1.25rem] shadow-lg hover:shadow-xl transition-all duration-200 border border-gray-100 dark:border-gray-600 p-4 sm:p-6 text-center"
+                className={`group bg-white dark:bg-gray-700 rounded-[1.25rem] shadow-lg hover:shadow-2xl transition-all duration-500 border border-gray-100 dark:border-gray-600 p-4 sm:p-6 text-center hover:-translate-y-2 hover:scale-[1.02] hover:border-emerald-300 dark:hover:border-emerald-600 ${
+                  featuresVisible 
+                    ? 'opacity-100 translate-y-0' 
+                    : 'opacity-0 translate-y-8'
+                }`}
+                style={{
+                  transitionDelay: featuresVisible ? `${index * 100}ms` : '0ms',
+                }}
               >
-                <div className="flex justify-center mb-3 sm:mb-4 scale-75 sm:scale-100">{feature.icon}</div>
-                <h3 className="font-semibold text-gray-800 dark:text-white mb-2 text-sm sm:text-base">{feature.title}</h3>
-                <p className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm">{feature.description}</p>
+                {/* Subtle border glow on hover */}
+                <div className="absolute inset-0 rounded-[1.25rem] bg-gradient-to-br from-emerald-100/0 to-emerald-200/0 dark:from-emerald-900/0 dark:to-emerald-800/0 group-hover:from-emerald-100/30 group-hover:to-emerald-200/30 dark:group-hover:from-emerald-900/30 dark:group-hover:to-emerald-800/30 transition-all duration-500 pointer-events-none" />
+                
+                <div className="relative z-10">
+                  <div className="flex justify-center mb-3 sm:mb-4 scale-75 sm:scale-100 animate-float-gentle">
+                    {feature.icon}
+                  </div>
+                  <h3 className="font-bold text-gray-800 dark:text-white mb-2 text-sm sm:text-base group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors duration-300">{feature.title}</h3>
+                  <p className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm leading-relaxed">{feature.description}</p>
+                </div>
               </Card>
             ))}
           </div>
@@ -1048,18 +1639,57 @@ export default function LandingPage() {
           </div>
 
           <div className="relative">
-            <Card className="bg-white dark:bg-gray-700 rounded-[1.25rem] shadow-lg border border-gray-100 dark:border-gray-600 p-6 sm:p-8">
-              <div className="text-center">
-                <div className="text-4xl sm:text-5xl lg:text-6xl mb-3 sm:mb-4">{testimonials[activeTestimonial].avatar}</div>
-                <div className="flex justify-center mb-3 sm:mb-4">
-                  {[...Array(testimonials[activeTestimonial].rating)].map((_, i) => (
-                    <Star key={i} className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400 fill-current" />
+            <Card 
+              className={`bg-white dark:bg-gray-700 rounded-[1.25rem] shadow-xl border border-gray-100 dark:border-gray-600 p-6 sm:p-8 relative overflow-hidden transition-all duration-300 ${
+                testimonialAnimating 
+                  ? 'opacity-0 scale-95' 
+                  : 'opacity-100 scale-100'
+              }`}
+            >
+              {/* Gentle gradient background */}
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-50/0 via-transparent to-blue-50/0 dark:from-emerald-900/0 dark:via-transparent dark:to-blue-900/0 pointer-events-none" />
+              
+              {/* Soft inner highlight */}
+              <div className="absolute top-0 left-0 right-0 h-1/3 bg-gradient-to-b from-white/10 to-transparent dark:from-white/5 pointer-events-none rounded-t-[1.25rem]" />
+              
+              <div className="text-center relative z-10">
+                <div 
+                  className={`text-4xl sm:text-5xl lg:text-6xl mb-3 sm:mb-4 transition-all duration-300 ${
+                    testimonialAnimating 
+                      ? 'opacity-0 scale-90' 
+                      : 'opacity-100 scale-100'
+                  }`}
+                >
+                  {testimonials[activeTestimonial].avatar}
+                </div>
+                <div 
+                  className={`flex justify-center mb-3 sm:mb-4 gap-1 transition-all duration-300 ${
+                    testimonialAnimating 
+                      ? 'opacity-0 translate-y-2' 
+                      : 'opacity-100 translate-y-0'
+                  }`}
+                >
+                  {[...Array(5)].map((_, i) => (
+                    <AnimatedStar key={i} index={i} progress={starProgress} />
                   ))}
                 </div>
-                <blockquote className="text-sm sm:text-base lg:text-lg text-gray-700 dark:text-gray-300 mb-4 sm:mb-6 italic px-2 sm:px-0">
+                <blockquote 
+                  className={`text-sm sm:text-base lg:text-lg text-gray-700 dark:text-gray-300 mb-4 sm:mb-6 italic px-2 sm:px-0 transition-all duration-300 ${
+                    testimonialAnimating 
+                      ? 'opacity-0 translate-y-4' 
+                      : 'opacity-100 translate-y-0'
+                  }`}
+                >
                   "{testimonials[activeTestimonial].content}"
                 </blockquote>
-                <div>
+                <div 
+                  className={`transition-all duration-300 ${
+                    testimonialAnimating 
+                      ? 'opacity-0 translate-y-2' 
+                      : 'opacity-100 translate-y-0'
+                  }`}
+                  style={{ transitionDelay: testimonialAnimating ? '0ms' : '100ms' }}
+                >
                   <div className="font-semibold text-gray-800 dark:text-white text-sm sm:text-base">
                     {testimonials[activeTestimonial].name}
                   </div>
@@ -1074,10 +1704,12 @@ export default function LandingPage() {
               {testimonials.map((_, index) => (
                 <button
                   key={index}
-                  className={`w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full transition-colors ${
-                    index === activeTestimonial ? "bg-emerald-400" : "bg-gray-300 dark:bg-gray-600"
+                  className={`w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full transition-all duration-300 ${
+                    index === activeTestimonial 
+                      ? "bg-emerald-400 animate-pulse-dot scale-125 shadow-lg shadow-emerald-400/50" 
+                      : "bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500"
                   }`}
-                  onClick={() => setActiveTestimonial(index)}
+                  onClick={() => changeTestimonial(index)}
                 />
               ))}
             </div>
@@ -1086,18 +1718,18 @@ export default function LandingPage() {
               <Button
                 variant="outline"
                 size="sm"
-                className="rounded-full dark:border-gray-600 dark:text-gray-300 h-9 w-9 sm:h-10 sm:w-10 p-0"
+                className="group rounded-full dark:border-gray-600 dark:text-gray-300 h-9 w-9 sm:h-10 sm:w-10 p-0 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 hover:border-emerald-300 dark:hover:border-emerald-600 transition-all duration-300 hover:shadow-lg hover:shadow-emerald-400/30 hover:scale-110"
                 onClick={prevTestimonial}
               >
-                ←
+                <span className="group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors duration-300">←</span>
               </Button>
               <Button
                 variant="outline"
                 size="sm"
-                className="rounded-full dark:border-gray-600 dark:text-gray-300 h-9 w-9 sm:h-10 sm:w-10 p-0"
+                className="group rounded-full dark:border-gray-600 dark:text-gray-300 h-9 w-9 sm:h-10 sm:w-10 p-0 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 hover:border-emerald-300 dark:hover:border-emerald-600 transition-all duration-300 hover:shadow-lg hover:shadow-emerald-400/30 hover:scale-110"
                 onClick={nextTestimonial}
               >
-                →
+                <span className="group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors duration-300">→</span>
               </Button>
             </div>
           </div>
