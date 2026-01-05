@@ -93,20 +93,6 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Check if review already exists for this order and menu item
-    const existingReview = await Review.findOne({ 
-      userId: session.user.id,
-      orderId,
-      menuItemId,
-    })
-
-    if (existingReview) {
-      return NextResponse.json(
-        { error: 'You have already reviewed this item for this order' },
-        { status: 400 }
-      )
-    }
-
     // Find the menu item name from order items
     const orderItem = order.items.find(item => item.menuItemId === menuItemId)
     if (!orderItem) {
@@ -116,22 +102,74 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Create review
-    const review = await Review.create({
-      orderId,
+    // Check if review already exists for this order and menu item
+    const existingReview = await Review.findOne({ 
       userId: session.user.id,
-      userName: session.user.name || 'Anonymous',
+      orderId,
       menuItemId,
-      menuItemName: orderItem.name,
-      rating: Number(rating),
-      comment: String(comment).trim(),
-      images: images && Array.isArray(images) ? images : [],
     })
 
+    let review
+    let isUpdate = false
+    
+    if (existingReview) {
+      // Update existing review instead of creating a new one
+      isUpdate = true
+      review = await Review.findOneAndUpdate(
+        { 
+          userId: session.user.id,
+          orderId,
+          menuItemId,
+        },
+        {
+          rating: Number(rating),
+          comment: String(comment).trim(),
+          images: images && Array.isArray(images) ? images : [],
+          updatedAt: new Date(),
+        },
+        { new: true }
+      )
+    } else {
+      // Create new review
+      review = await Review.create({
+        orderId,
+        userId: session.user.id,
+        userName: session.user.name || 'Anonymous',
+        userEmail: session.user.email || '',
+        menuItemId,
+        menuItemName: orderItem.name,
+        rating: Number(rating),
+        comment: String(comment).trim(),
+        images: images && Array.isArray(images) ? images : [],
+      })
+    }
+
+    // Update menu item's average rating and total reviews
+    const { MenuItem } = await import('@/lib/models/MenuItems')
+    const aggregation = await Review.aggregate([
+      { $match: { menuItemId: menuItemId } },
+      {
+        $group: {
+          _id: '$menuItemId',
+          averageRating: { $avg: '$rating' },
+          totalReviews: { $sum: 1 },
+        },
+      },
+    ])
+
+    if (aggregation.length > 0) {
+      const { averageRating, totalReviews } = aggregation[0]
+      await MenuItem.findByIdAndUpdate(menuItemId, {
+        averageRating: Math.round(averageRating * 10) / 10, // Round to 1 decimal
+        totalReviews: totalReviews,
+      })
+    }
+
     return NextResponse.json({
-      message: 'Review submitted successfully',
+      message: isUpdate ? 'Review updated successfully' : 'Review submitted successfully',
       review,
-    }, { status: 201 })
+      isUpdate,
+    }, { status: isUpdate ? 200 : 201 })
   } catch (error: any) {
     console.error('Error creating review:', error)
     

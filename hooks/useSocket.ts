@@ -129,6 +129,7 @@ export const useSocket = (userRole?: 'admin' | 'customer', userId?: string) => {
     status: string
     userId: string
     estimatedTime?: number
+    items?: Array<{ name: string; quantity: number; price: number }>
   }) => {
     if (socketRef.current?.connected) {
       socketRef.current.emit('order-status-update', updateData)

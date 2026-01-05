@@ -83,7 +83,7 @@ app.prepare().then(() => {
     socket.on('order-status-update', (updateData) => {
       console.log('📋 Order status update:', updateData)
       
-      const { orderId, status, userId, estimatedTime } = updateData || {}
+      const { orderId, status, userId, estimatedTime, items } = updateData || {}
       
       if (!orderId || !status || !userId) {
         console.error('Invalid order status update data')
@@ -96,8 +96,9 @@ app.prepare().then(() => {
         orderId,
         status,
         estimatedTime,
+        items, // Include order items
         timestamp: new Date().toISOString(),
-        message: getStatusMessage(status, orderId, estimatedTime),
+        message: getStatusMessage(status, orderId, estimatedTime, items),
       })
       
       console.log(`📢 Notified customer ${userId} about order ${orderId} status: ${status}`)
@@ -126,22 +127,27 @@ app.prepare().then(() => {
 })
 
 /**
- * Helper function to generate status messages
+ * Helper function to generate status messages with order items
  */
-function getStatusMessage(status, orderId, estimatedTime) {
+function getStatusMessage(status, orderId, estimatedTime, items) {
+  // Format order items: "2x Burger, 1x Pizza"
+  const itemsText = items && items.length > 0
+    ? items.map(item => `${item.quantity}x ${item.name}`).join(', ')
+    : 'Your order'
+  
   switch (status) {
     case 'accepted':
-      return `Order #${orderId} has been accepted!${estimatedTime ? ` Estimated time: ${estimatedTime} minutes` : ''}`
+      return `${itemsText} has been accepted!${estimatedTime ? ` Estimated time: ${estimatedTime} minutes` : ''}`
     case 'preparing':
-      return `Order #${orderId} is being prepared! 🍳`
+      return `${itemsText} is being prepared! 🍳`
     case 'ready':
-      return `Order #${orderId} is ready for pickup! 🎉`
+      return `${itemsText} is ready for pickup! 🎉`
     case 'completed':
-      return `Order #${orderId} has been completed! ✅`
+      return `${itemsText} has been completed! ✅`
     case 'cancelled':
-      return `Order #${orderId} has been cancelled`
+      return `${itemsText} has been cancelled`
     default:
-      return `Order #${orderId} status updated to ${status}`
+      return `${itemsText} status updated to ${status}`
   }
 }
 

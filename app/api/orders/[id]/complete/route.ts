@@ -43,6 +43,14 @@ export async function POST(
       )
     }
 
+    // If order is already completed, return success (idempotent operation)
+    if (order.status === 'completed') {
+      return NextResponse.json({
+        message: 'Order is already completed',
+        order: order,
+      }, { status: 200 })
+    }
+    
     // Only allow completion if order is in 'ready' status
     if (order.status !== 'ready') {
       return NextResponse.json(

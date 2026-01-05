@@ -118,13 +118,14 @@ export default function AdminDashboard() {
         prev.map((o) => (o.orderId === orderId ? updatedOrder : o))
       )
 
-      // Emit socket event to notify customer
+      // Emit socket event to notify customer (include order items)
       if (isConnected) {
         emitStatusUpdate({
           orderId: updatedOrder.orderId,
           status: updatedOrder.status,
           userId: updatedOrder.userId,
           estimatedTime: updatedOrder.estimatedTime,
+          items: updatedOrder.items, // Include order items
         })
       }
 

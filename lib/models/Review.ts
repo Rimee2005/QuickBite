@@ -35,7 +35,8 @@ const reviewSchema = new mongoose.Schema<IReview>({
 
 // Index for efficient queries
 reviewSchema.index({ menuItemId: 1 })
-reviewSchema.index({ userId: 1, orderId: 1 }, { unique: true }) // One review per user per order
+// Unique index: one review per user per order per menu item
+reviewSchema.index({ userId: 1, orderId: 1, menuItemId: 1 }, { unique: true })
 
 // Update the updatedAt field before saving
 reviewSchema.pre('save', function(next) {

@@ -101,14 +101,20 @@ export default function OrderStatusPage() {
           }
           updateProgress(updateData.status)
           
+          // Update order items if provided in notification
+          if (updateData.items && order) {
+            setOrder(prev => prev ? { ...prev, items: updateData.items } : null)
+          }
+          
+          // Use the message from server which includes order items
           toast({
             title: `${t("status.status_updated")} 🔔`,
-            description: latestNotification.message,
+            description: latestNotification.message || 'Order status updated',
           })
         }
       }
     }
-  }, [notifications, orderId, toast])
+  }, [notifications, orderId, toast, order])
 
   const updateProgress = (orderStatus: string) => {
     switch (orderStatus) {
@@ -155,6 +161,25 @@ export default function OrderStatusPage() {
   const markAsPickedUp = async () => {
     if (!orderId) return
 
+    // Prevent duplicate submissions
+    if (status === 'completed') {
+      toast({
+        title: "Order already completed",
+        description: "This order has already been marked as completed.",
+      })
+      return
+    }
+
+    // Double check the order status before submitting
+    if (order?.status === 'completed') {
+      setStatus("completed")
+      toast({
+        title: "Order already completed",
+        description: "This order has already been marked as completed.",
+      })
+      return
+    }
+
     try {
       const response = await fetch(`/api/orders/${orderId}/complete`, {
         method: 'POST',
@@ -162,9 +187,28 @@ export default function OrderStatusPage() {
 
       if (!response.ok) {
         const errorData = await response.json()
+        
+        // If order is already completed, handle gracefully
+        if (errorData.error?.includes('already') || errorData.error?.includes('completed')) {
+          // Refresh order status from server
+          const refreshResponse = await fetch(`/api/orders/${orderId}`)
+          if (refreshResponse.ok) {
+            const refreshData = await refreshResponse.json()
+            setOrder(refreshData.order)
+            setStatus(refreshData.order.status)
+          }
+          
+          toast({
+            title: "Order already completed",
+            description: "This order has already been marked as completed.",
+          })
+          return
+        }
+        
         throw new Error(errorData.error || 'Failed to mark order as completed')
       }
 
+      const data = await response.json()
       setStatus("completed")
       setOrder((prev) => prev ? { ...prev, status: 'completed' } : null)
       
@@ -172,6 +216,11 @@ export default function OrderStatusPage() {
         title: `✅ ${t("status.order_complete")}`,
         description: "Order marked as completed! Check your email for rating & review link.",
       })
+      
+      // Redirect to review page after a short delay
+      setTimeout(() => {
+        router.push(`/student/review?orderId=${orderId}`)
+      }, 2000)
     } catch (error: any) {
       console.error('Error marking order as completed:', error)
       toast({
@@ -374,10 +423,13 @@ export default function OrderStatusPage() {
                         </div>
                         <Button
                           onClick={markAsPickedUp}
-                          className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold py-3 px-6 rounded-[1.5rem] transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+                          disabled={status === 'completed' || order?.status === 'completed'}
+                          className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold py-3 px-6 rounded-[1.5rem] transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:transform-none"
                         >
                           <CheckCircle className="w-5 h-5 mr-2" />
-                          {t("status.mark_picked")}
+                          {status === 'completed' || order?.status === 'completed' 
+                            ? (t("status.already_completed") || "Already Completed") 
+                            : t("status.mark_picked")}
                         </Button>
                       </div>
                     </div>

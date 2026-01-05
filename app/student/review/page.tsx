@@ -49,7 +49,7 @@ export default function ReviewPage() {
     }
   }, [isAuthenticated, user, router])
 
-  // Fetch order details
+  // Fetch order details and existing review
   useEffect(() => {
     if (!orderId) {
       toast({
@@ -75,6 +75,25 @@ export default function ReviewPage() {
           const item = data.order.items.find((i: OrderItem) => i.menuItemId === menuItemId)
           if (item) {
             setSelectedItem(item)
+            
+            // Fetch existing review for this item
+            try {
+              const reviewResponse = await fetch(`/api/reviews?menuItemId=${menuItemId}`)
+              if (reviewResponse.ok) {
+                const reviewData = await reviewResponse.json()
+                const existingReview = reviewData.reviews?.find(
+                  (r: any) => r.orderId === orderId && r.userId === user?.id
+                )
+                if (existingReview) {
+                  setRating(existingReview.rating)
+                  setComment(existingReview.comment || "")
+                  setImages(existingReview.images || [])
+                  setImagePreviews(existingReview.images || [])
+                }
+              }
+            } catch (error) {
+              console.error("Error fetching existing review:", error)
+            }
           }
         }
       } catch (error: any) {
@@ -89,7 +108,7 @@ export default function ReviewPage() {
     }
 
     fetchOrder()
-  }, [orderId, menuItemId, router, toast])
+  }, [orderId, menuItemId, router, toast, user?.id])
 
   // Handle image upload
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -208,9 +227,10 @@ export default function ReviewPage() {
         throw new Error(errorData.error || 'Failed to submit review')
       }
 
+      const data = await response.json()
       toast({
-        title: "Review submitted successfully! ⭐",
-        description: "Thank you for your feedback!",
+        title: data.isUpdate ? "Review updated successfully! ⭐" : "Review submitted successfully! ⭐",
+        description: data.isUpdate ? "Your review has been updated." : "Thank you for your feedback!",
       })
 
       // Redirect to order status or dashboard
