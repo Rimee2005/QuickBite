@@ -3,6 +3,11 @@ import { connectToDatabase } from '@/lib/mongodb'
 import { Order } from '@/lib/models/order'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+import { 
+  sendEmail, 
+  getOrderAcceptedEmailTemplate, 
+  getOrderReadyEmailTemplate 
+} from '@/lib/email'
 
 /**
  * GET /api/orders/[id]
@@ -97,6 +102,16 @@ export async function PATCH(
 
     await connectToDatabase()
 
+    // Get the old order to check previous status
+    const oldOrder = await Order.findOne({ orderId: params.id }).lean()
+    
+    if (!oldOrder) {
+      return NextResponse.json(
+        { error: 'Order not found' },
+        { status: 404 }
+      )
+    }
+
     const order = await Order.findOneAndUpdate(
       { orderId: params.id },
       { 
@@ -112,6 +127,34 @@ export async function PATCH(
         { error: 'Order not found' },
         { status: 404 }
       )
+    }
+
+    // Send email notifications based on status change
+    if (order.userEmail && oldOrder.status !== status) {
+      try {
+        if (status === 'accepted') {
+          // Send order accepted email
+          const emailHtml = getOrderAcceptedEmailTemplate(order)
+          await sendEmail({
+            to: order.userEmail,
+            subject: `Order Accepted - ${order.orderId} | QickBite`,
+            html: emailHtml,
+          })
+          console.log('Order accepted email sent to:', order.userEmail)
+        } else if (status === 'ready') {
+          // Send order ready email
+          const emailHtml = getOrderReadyEmailTemplate(order)
+          await sendEmail({
+            to: order.userEmail,
+            subject: `Order Ready for Pickup - ${order.orderId} | QickBite`,
+            html: emailHtml,
+          })
+          console.log('Order ready email sent to:', order.userEmail)
+        }
+      } catch (emailError: any) {
+        // Don't fail the status update if email fails
+        console.error('Failed to send status update email:', emailError)
+      }
     }
 
     // Return updated order

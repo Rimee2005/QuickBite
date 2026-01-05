@@ -3,6 +3,7 @@ import { connectToDatabase } from '@/lib/mongodb'
 import { Order } from '@/lib/models/order'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+import { sendEmail, getOrderPlacedEmailTemplate } from '@/lib/email'
 
 /**
  * GET /api/orders
@@ -139,6 +140,24 @@ export async function POST(req: NextRequest) {
 
     // Create new order
     const order = await Order.create(orderData)
+
+    // Send order placed email to user
+    if (order.userEmail) {
+      try {
+        // Convert Mongoose document to plain object
+        const orderObj = order.toObject ? order.toObject() : order
+        const emailHtml = getOrderPlacedEmailTemplate(orderObj as any)
+        await sendEmail({
+          to: order.userEmail,
+          subject: `Order Placed - ${order.orderId} | QickBite`,
+          html: emailHtml,
+        })
+        console.log('Order placed email sent to:', order.userEmail)
+      } catch (emailError: any) {
+        // Don't fail the order creation if email fails
+        console.error('Failed to send order placed email:', emailError)
+      }
+    }
 
     // Prepare response data
     const responseData = {
