@@ -258,7 +258,10 @@ export default function StudentDashboard() {
                 className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 dark:border-gray-700 overflow-hidden transform hover:-translate-y-1"
                 style={{
                   animationDelay: `${index * 100}ms`,
-                  animation: "slideInUp 0.5s ease-out forwards",
+                  animationName: "slideInUp",
+                  animationDuration: "0.5s",
+                  animationTimingFunction: "ease-out",
+                  animationFillMode: "forwards",
                 }}
               >
                 {/* Food Image/Emoji */}

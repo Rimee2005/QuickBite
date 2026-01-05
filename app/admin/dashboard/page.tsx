@@ -294,10 +294,9 @@ export default function AdminDashboard() {
                 {orders.map((order, index) => (
                   <Card
                     key={order.orderId}
-                    className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 dark:border-gray-700"
+                    className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 dark:border-gray-700 animate-slide-in-up"
                     style={{
                       animationDelay: `${index * 100}ms`,
-                      animation: "slideInUp 0.5s ease-out forwards",
                     }}
                   >
                     <CardHeader className="pb-4">
@@ -443,6 +442,12 @@ export default function AdminDashboard() {
             opacity: 1;
             transform: translateY(0);
           }
+        }
+        .animate-slide-in-up {
+          animation-name: slideInUp;
+          animation-duration: 0.5s;
+          animation-timing-function: ease-out;
+          animation-fill-mode: forwards;
         }
       `}</style>
     </div>
