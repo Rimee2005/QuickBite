@@ -51,15 +51,26 @@ export default function CartPage() {
     setIsPlacingOrder(true)
 
     try {
-      // Prepare order items
-      const orderItems = items.map(item => ({
-        menuItemId: item.id,
-        name: item.name,
-        quantity: item.quantity,
-        price: item.price,
-      }))
+      // Prepare order items with validation
+      const orderItems = items.map((item, index) => {
+        if (!item.id) {
+          throw new Error(`Cart item ${index + 1} is missing an ID. Please remove and re-add the item.`)
+        }
+        return {
+          menuItemId: String(item.id),
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+        }
+      })
+
+      if (orderItems.length === 0) {
+        throw new Error('Cart is empty')
+      }
 
       const totalAmount = getTotalPrice()
+      
+      console.log('Placing order with items:', orderItems)
 
       // Create order via API
       const response = await fetch('/api/orders', {
@@ -73,11 +84,14 @@ export default function CartPage() {
         }),
       })
 
-      const data = await response.json()
-
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to place order')
+        const errorData = await response.json().catch(() => ({ error: 'Failed to place order' }))
+        const errorMessage = errorData.error || `Server error: ${response.status} ${response.statusText}`
+        console.error('Order creation failed:', errorMessage, errorData)
+        throw new Error(errorMessage)
       }
+
+      const data = await response.json()
 
       const order = data.order
 
@@ -192,7 +206,7 @@ export default function CartPage() {
 
             {items.map((item, index) => (
               <Card
-                key={item.id}
+                key={item.id || `cart-item-${index}`}
                 className="bg-white dark:bg-gray-800 rounded-[1.5rem] shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 dark:border-gray-700 transform hover:-translate-y-1"
                 style={{
                   animationDelay: `${index * 100}ms`,
@@ -203,7 +217,15 @@ export default function CartPage() {
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div className="flex items-center space-x-3 sm:space-x-4 flex-1 min-w-0">
                       <div className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 bg-gradient-to-br from-emerald-100 to-emerald-200 dark:from-emerald-900 dark:to-emerald-800 rounded-xl sm:rounded-2xl flex items-center justify-center text-2xl sm:text-3xl shadow-inner flex-shrink-0">
-                        {item.emoji}
+                        {item.emoji || item.image ? (
+                          item.image ? (
+                            <img src={item.image} alt={item.name} className="w-full h-full object-cover rounded-xl sm:rounded-2xl" />
+                          ) : (
+                            <span>{item.emoji}</span>
+                          )
+                        ) : (
+                          <span>🍽️</span>
+                        )}
                       </div>
                       <div className="min-w-0 flex-1">
                         <h3 className="font-bold text-base sm:text-lg text-gray-800 dark:text-white truncate">{item.name}</h3>
@@ -274,8 +296,8 @@ export default function CartPage() {
                   {/* Items Breakdown */}
                   <div className="space-y-2 sm:space-y-3">
                     <h4 className="font-semibold text-gray-800 dark:text-white mb-2 sm:mb-3 text-sm sm:text-base">{t("common.items")}</h4>
-                    {items.map((item) => (
-                      <div key={item.id} className="flex justify-between text-xs sm:text-sm">
+                    {items.map((item, index) => (
+                      <div key={item.id || `order-item-${index}`} className="flex justify-between text-xs sm:text-sm">
                         <span className="text-gray-600 dark:text-gray-300 truncate pr-2">
                           {item.quantity}x {item.name}
                         </span>

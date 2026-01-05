@@ -59,6 +59,14 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const { items, totalAmount } = body
 
+    console.log('Order creation request:', {
+      userId: session.user.id,
+      userName: session.user.name,
+      userEmail: session.user.email,
+      itemsCount: items?.length,
+      totalAmount,
+    })
+
     if (!items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json(
         { error: 'Order items are required' },
@@ -75,22 +83,69 @@ export async function POST(req: NextRequest) {
 
     await connectToDatabase()
 
-    // Create new order
-    const order = await Order.create({
-      userId: session.user.id,
-      userName: session.user.name || 'Unknown',
-      userEmail: session.user.email || '',
-      items,
-      totalAmount,
-      status: 'pending',
+    // Validate required fields
+    if (!session.user.id) {
+      return NextResponse.json(
+        { error: 'User ID is missing' },
+        { status: 400 }
+      )
+    }
+
+    if (!session.user.name && !session.user.email) {
+      return NextResponse.json(
+        { error: 'User name or email is required' },
+        { status: 400 }
+      )
+    }
+
+    // Validate order items structure
+    const validatedItems = items.map((item: any, index: number) => {
+      // menuItemId can be a string, number, or undefined (we'll generate one if missing)
+      const menuItemId = item.menuItemId !== undefined && item.menuItemId !== null 
+        ? String(item.menuItemId) 
+        : `temp-${Date.now()}-${index}`
+      
+      if (!item.name || String(item.name).trim().length === 0) {
+        throw new Error(`Item ${index + 1}: name is required`)
+      }
+      if (!item.quantity || item.quantity <= 0) {
+        throw new Error(`Item ${index + 1}: valid quantity is required`)
+      }
+      if (!item.price || item.price <= 0) {
+        throw new Error(`Item ${index + 1}: valid price is required`)
+      }
+      return {
+        menuItemId: menuItemId,
+        name: String(item.name).trim(),
+        quantity: Number(item.quantity),
+        price: Number(item.price),
+      }
     })
 
-    // Emit socket event for real-time notification
-    // This will be handled by the Socket.IO server
+    // Prepare order data
     const orderData = {
+      userId: String(session.user.id),
+      userName: session.user.name || session.user.email || 'Unknown',
+      userEmail: session.user.email || '',
+      items: validatedItems,
+      totalAmount: Number(totalAmount),
+      status: 'pending' as const,
+    }
+
+    console.log('Creating order with data:', {
+      ...orderData,
+      items: validatedItems.map(i => ({ name: i.name, quantity: i.quantity, price: i.price })),
+    })
+
+    // Create new order
+    const order = await Order.create(orderData)
+
+    // Prepare response data
+    const responseData = {
       orderId: order.orderId,
       userId: order.userId,
       userName: order.userName,
+      userEmail: order.userEmail,
       items: order.items,
       totalAmount: order.totalAmount,
       status: order.status,
@@ -103,12 +158,21 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       message: 'Order created successfully',
-      order: orderData,
+      order: responseData,
     }, { status: 201 })
   } catch (error: any) {
     console.error('Error creating order:', error)
+    
+    // Provide more specific error messages
+    if (error?.name === 'ValidationError') {
+      return NextResponse.json(
+        { error: `Validation error: ${error.message}` },
+        { status: 400 }
+      )
+    }
+    
     return NextResponse.json(
-      { error: 'Failed to create order' },
+      { error: error?.message || 'Failed to create order' },
       { status: 500 }
     )
   }

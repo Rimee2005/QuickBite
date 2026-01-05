@@ -12,54 +12,23 @@ import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { useCart } from "@/contexts/cart-context"
 import { useLanguage } from "@/contexts/language-context"
+import Image from "next/image"
+import { ImageIcon } from "lucide-react"
 
 interface FoodItem {
-  id: number
+  _id?: string
+  id?: number
   name: string
   price: number
   category: string
-  image: string
-  emoji: string
+  image?: string
+  emoji?: string
+  description?: string
 }
 
-const foodItems: FoodItem[] = [
-  { id: 1, name: "Burger", price: 70, category: "Meals", image: "/placeholder.svg?height=200&width=200", emoji: "🍔" },
-  {
-    id: 2,
-    name: "Cold Coffee",
-    price: 40,
-    category: "Beverages",
-    image: "/placeholder.svg?height=200&width=200",
-    emoji: "☕",
-  },
-  {
-    id: 3,
-    name: "French Fries",
-    price: 50,
-    category: "Snacks",
-    image: "/placeholder.svg?height=200&width=200",
-    emoji: "🍟",
-  },
-  {
-    id: 4,
-    name: "Chicken Biryani",
-    price: 120,
-    category: "Meals",
-    image: "/placeholder.svg?height=200&width=200",
-    emoji: "🍛",
-  },
-  { id: 5, name: "Samosa", price: 15, category: "Snacks", image: "/placeholder.svg?height=200&width=200", emoji: "🥟" },
-  {
-    id: 6,
-    name: "Mango Juice",
-    price: 35,
-    category: "Beverages",
-    image: "/placeholder.svg?height=200&width=200",
-    emoji: "🥭",
-  },
-]
-
 export default function StudentDashboard() {
+  const [foodItems, setFoodItems] = useState<FoodItem[]>([])
+  const [loading, setLoading] = useState(true)
   const [selectedCategory, setSelectedCategory] = useState("All")
   const [searchTerm, setSearchTerm] = useState("")
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -68,6 +37,29 @@ export default function StudentDashboard() {
   const { user, logout, isAuthenticated, isLoading } = useAuth()
   const { items, addItem, updateQuantity, getTotalItems } = useCart()
   const { t } = useLanguage()
+
+  // Fetch menu items from API
+  useEffect(() => {
+    const fetchMenuItems = async () => {
+      try {
+        const response = await fetch('/api/menu')
+        if (response.ok) {
+          const data = await response.json()
+          setFoodItems(data.menuItems || [])
+        } else {
+          // Fallback to empty array if API fails
+          setFoodItems([])
+        }
+      } catch (error) {
+        console.error('Error fetching menu items:', error)
+        setFoodItems([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchMenuItems()
+  }, [])
 
   const categories = [
     { key: "All", label: t("dashboard.categories.all") },
@@ -90,20 +82,31 @@ export default function StudentDashboard() {
   })
 
   const addToCart = (item: FoodItem) => {
+    const itemId = item._id || item.id
+    if (!itemId) {
+      toast({
+        title: "Error adding item",
+        description: "Item ID is missing. Please refresh the page.",
+        variant: "destructive",
+      })
+      return
+    }
+    
     addItem({
-      id: item.id,
+      id: String(itemId),
       name: item.name,
       price: item.price,
-      emoji: item.emoji,
+      emoji: item.emoji || "",
+      image: item.image,
     })
     toast({
       title: `${t("dashboard.added_to_cart")} 🛒`,
-      description: `${item.name} ${item.emoji} ${t("dashboard.added_desc")}`,
+      description: `${item.name} ${item.emoji || ""} ${t("dashboard.added_desc")}`,
     })
   }
 
-  const getItemQuantity = (itemId: number) => {
-    const cartItem = items.find((item) => item.id === itemId)
+  const getItemQuantity = (itemId: string | number) => {
+    const cartItem = items.find((item) => item.id === itemId.toString())
     return cartItem?.quantity || 0
   }
 
@@ -251,10 +254,11 @@ export default function StudentDashboard() {
         {/* Food Items Grid - Responsive */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
           {filteredItems.map((item, index) => {
-            const quantity = getItemQuantity(item.id)
+            const itemId = item._id || item.id
+            const quantity = getItemQuantity(itemId || "")
             return (
               <Card
-                key={item.id}
+                key={itemId}
                 className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 dark:border-gray-700 overflow-hidden transform hover:-translate-y-1"
                 style={{
                   animationDelay: `${index * 100}ms`,
@@ -265,15 +269,26 @@ export default function StudentDashboard() {
                 }}
               >
                 {/* Food Image/Emoji */}
-                <div className="aspect-square bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center">
-                  <span className="text-4xl sm:text-5xl lg:text-6xl">{item.emoji}</span>
+                <div className="aspect-square bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center relative overflow-hidden">
+                  {item.image ? (
+                    <Image
+                      src={item.image}
+                      alt={item.name}
+                      fill
+                      className="object-cover"
+                    />
+                  ) : item.emoji ? (
+                    <span className="text-4xl sm:text-5xl lg:text-6xl">{item.emoji}</span>
+                  ) : (
+                    <ImageIcon className="w-16 h-16 text-gray-400" />
+                  )}
                 </div>
 
                 <CardContent className="p-4">
                   {/* Item Info */}
                   <div className="mb-4">
                     <h3 className="font-bold text-base sm:text-lg text-gray-800 dark:text-white mb-1 line-clamp-1">
-                      {item.name} {item.emoji}
+                      {item.name} {item.emoji || ""}
                     </h3>
                     <p className="text-emerald-600 dark:text-emerald-400 font-bold text-lg sm:text-xl">₹{item.price}</p>
                   </div>
@@ -285,7 +300,7 @@ export default function StudentDashboard() {
                         size="sm"
                         variant="ghost"
                         className="w-8 h-8 p-0 rounded-xl hover:bg-red-100 dark:hover:bg-red-900 text-red-600 dark:text-red-400"
-                        onClick={() => updateQuantity(item.id, quantity - 1)}
+                        onClick={() => updateQuantity(itemId?.toString() || "", quantity - 1)}
                       >
                         <Minus className="w-4 h-4" />
                       </Button>
@@ -294,7 +309,7 @@ export default function StudentDashboard() {
                         size="sm"
                         variant="ghost"
                         className="w-8 h-8 p-0 rounded-xl hover:bg-emerald-100 dark:hover:bg-emerald-900 text-emerald-600 dark:text-emerald-400"
-                        onClick={() => updateQuantity(item.id, quantity + 1)}
+                        onClick={() => updateQuantity(itemId?.toString() || "", quantity + 1)}
                       >
                         <Plus className="w-4 h-4" />
                       </Button>
