@@ -1,6 +1,6 @@
 import NextAuth from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
-import { compare } from "bcrypt"
+import { verifyPassword } from "@/lib/auth"
 import { connectToDatabase } from "@/lib/mongodb"
 import { User } from "@/lib/models/User"
 import type { NextAuthOptions } from "next-auth"
@@ -24,12 +24,32 @@ export const authOptions: NextAuthOptions = {
           const user = await User.findOne({ email: credentials.email })
 
           if (!user) {
+            console.error(`User not found for email: ${credentials.email}`)
             throw new Error("Invalid credentials")
           }
 
-          const isPasswordValid = await compare(credentials.password, user.password)
+          // Check if password is hashed (starts with $2a$, $2b$, or $2y$)
+          // If it's plain text (old data), we need to handle it differently
+          const isHashed = user.password && (
+            user.password.startsWith('$2a$') || 
+            user.password.startsWith('$2b$') || 
+            user.password.startsWith('$2y$')
+          )
+
+          let isPasswordValid = false
+
+          if (isHashed) {
+            // Password is hashed, use bcryptjs to verify
+            isPasswordValid = await verifyPassword(credentials.password, user.password)
+          } else {
+            // Old plain text password - for backward compatibility
+            // In production, you should force password reset for these users
+            console.warn(`Plain text password detected for user: ${user.email}. Please update to hashed password.`)
+            isPasswordValid = credentials.password === user.password
+          }
 
           if (!isPasswordValid) {
+            console.error(`Password validation failed for email: ${credentials.email}`)
             throw new Error("Invalid credentials")
           }
 
