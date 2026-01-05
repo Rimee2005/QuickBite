@@ -302,9 +302,13 @@ export default function AdminDashboard() {
                     <CardHeader className="pb-4">
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
                         <div>
-                          <CardTitle className="text-lg sm:text-xl text-gray-800 dark:text-white">{order.orderId}</CardTitle>
-                          <p className="text-gray-600 dark:text-gray-300 text-sm sm:text-base">{order.userName}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">₹{order.totalAmount.toFixed(2)}</p>
+                          <CardTitle className="text-lg sm:text-xl text-gray-800 dark:text-white">
+                            {order.userName} - {order.orderId}
+                          </CardTitle>
+                          <p className="text-gray-600 dark:text-gray-300 text-sm sm:text-base mt-1">
+                            {order.userEmail}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">₹{order.totalAmount.toFixed(2)}</p>
                         </div>
                         <div className="flex items-center justify-between sm:justify-end space-x-4">
                           <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
