@@ -83,21 +83,28 @@ export const authOptions: NextAuthOptions = {
   },
   callbacks: {
     async jwt({ token, user }) {
+      // Initial sign in - add user data to token
       if (user) {
         token.id = user.id
+        token.name = user.name
+        token.email = user.email
         token.type = user.type
-        if (user.type === 'student') {
+        if (user.type === 'student' && 'registrationNumber' in user) {
           token.registrationNumber = user.registrationNumber
         }
       }
+      // On subsequent requests, token already has the data, so just return it
       return token
     },
     async session({ session, token }) {
-      if (token) {
-        session.user.id = token.id
-        session.user.type = token.type
-        if (token.type === 'student') {
-          session.user.registrationNumber = token.registrationNumber
+      // Add token data to session
+      if (token && session.user) {
+        session.user.id = token.id as string
+        session.user.name = token.name as string
+        session.user.email = token.email as string
+        session.user.type = token.type as "student" | "admin" | "teacher"
+        if (token.type === 'student' && token.registrationNumber) {
+          session.user.registrationNumber = token.registrationNumber as string
         }
       }
       return session
@@ -105,6 +112,10 @@ export const authOptions: NextAuthOptions = {
   },
   session: {
     strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
+  jwt: {
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   secret: process.env.NEXTAUTH_SECRET,
   debug: process.env.NODE_ENV === "development",

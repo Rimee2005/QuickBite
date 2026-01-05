@@ -27,6 +27,8 @@ declare module "next-auth/jwt" {
   /** Returned by the `jwt` callback and `auth`, when using JWT sessions */
   interface JWT {
     id: string
+    name?: string
+    email?: string
     type: "student" | "admin" | "teacher"
     registrationNumber?: string
   }
