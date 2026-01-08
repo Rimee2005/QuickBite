@@ -12,6 +12,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <SessionProvider
       refetchInterval={5 * 60} // Refetch session every 5 minutes
       refetchOnWindowFocus={true} // Refetch when window regains focus
+      basePath={process.env.NEXTAUTH_URL ? undefined : "/api/auth"} // Use default in production
     >
       <AuthProvider>
         <ThemeProvider

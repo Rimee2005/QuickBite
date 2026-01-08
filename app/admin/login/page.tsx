@@ -45,15 +45,34 @@ export default function AdminLoginPage() {
         throw new Error(result.error)
       }
 
-      // Wait for session to update
-      const session = await getSession()
-      if (session?.user?.type === "admin") {
+      // Wait for session to be established - retry with delay for production
+      let session = null
+      let attempts = 0
+      const maxAttempts = 10
+      
+      while (!session && attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 200)) // Wait 200ms
+        session = await getSession()
+        attempts++
+      }
+
+      if (!session?.user) {
+        throw new Error("Session not established. Please try again.")
+      }
+
+      if (session.user.type === "admin") {
         toast({
           title: t("login.success"),
           description: t("login.welcome_admin"),
         })
-        router.push("/admin/dashboard")
-        router.refresh()
+        
+        // Use window.location for production to ensure full page reload and cookie persistence
+        if (process.env.NODE_ENV === 'production') {
+          window.location.href = "/admin/dashboard"
+        } else {
+          router.push("/admin/dashboard")
+          router.refresh()
+        }
       } else {
         // Not an admin
         toast({

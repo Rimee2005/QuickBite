@@ -45,9 +45,22 @@ export default function LoginPage() {
         throw new Error(result.error)
       }
 
-      // Wait for session to update, then check user type
-      const session = await getSession()
-      const userType = session?.user?.type || 'student'
+      // Wait for session to be established - retry with delay for production
+      let session = null
+      let attempts = 0
+      const maxAttempts = 10
+      
+      while (!session && attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 200)) // Wait 200ms
+        session = await getSession()
+        attempts++
+      }
+
+      if (!session?.user) {
+        throw new Error("Session not established. Please try again.")
+      }
+
+      const userType = session.user.type || 'student'
       
       let redirectPath = '/student/dashboard'
       if (userType === 'admin') {
@@ -60,8 +73,14 @@ export default function LoginPage() {
         title: t("login.success"),
         description: t("login.welcome_back_msg"),
       })
-      router.push(redirectPath)
-      router.refresh()
+      
+      // Use window.location for production to ensure full page reload and cookie persistence
+      if (process.env.NODE_ENV === 'production') {
+        window.location.href = redirectPath
+      } else {
+        router.push(redirectPath)
+        router.refresh()
+      }
     } catch (error) {
       toast({
         title: t("login.failed"),

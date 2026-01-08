@@ -102,11 +102,22 @@ export default function StudentDashboard() {
     { key: "Meals", label: t("dashboard.categories.meals") },
   ]
 
-  // Redirect if not authenticated
+  // Redirect if not authenticated (wait for session to load)
   useEffect(() => {
-    if (!isLoading && (!isAuthenticated || user?.type !== "student")) {
-      router.push("/login")
+    // Don't redirect while session is still loading
+    if (isLoading) {
+      return
     }
+    
+    // Only redirect if we're sure the user is not authenticated
+    // Give it a moment for session to establish after login
+    const checkAuth = setTimeout(() => {
+      if (!isAuthenticated || (user && user.type !== "student")) {
+        router.push("/login")
+      }
+    }, 500) // Wait 500ms for session to establish
+    
+    return () => clearTimeout(checkAuth)
   }, [isLoading, isAuthenticated, user, router])
 
   const filteredItems = foodItems.filter((item) => {
