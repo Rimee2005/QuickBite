@@ -1,6 +1,7 @@
 import { Inter } from "next/font/google"
 import "./globals.css"
 import { Providers } from "@/components/providers"
+import { ErrorHandler } from "@/components/error-handler"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -12,6 +13,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
+        <ErrorHandler />
         <Providers>
           {children}
         </Providers>

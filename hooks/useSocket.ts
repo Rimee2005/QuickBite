@@ -113,9 +113,15 @@ export const useSocket = (userRole?: 'admin' | 'customer', userId?: string) => {
       setIsConnected(false)
     })
 
-    socketInstance.on('connect_error', (error) => {
+    socketInstance.on('connect_error', (error: Error) => {
       // Only log error, don't break the app
-      console.warn('⚠️ Socket.IO connection error (app will continue without real-time features):', error.message)
+      // Handle both Error objects and Event objects
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : (error && typeof error === 'object' && 'message' in error)
+          ? String(error.message)
+          : String(error)
+      console.warn('⚠️ Socket.IO connection error (app will continue without real-time features):', errorMessage)
       setIsConnected(false)
       clearTimeout(connectionTimeout)
     })
