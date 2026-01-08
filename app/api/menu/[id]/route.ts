@@ -10,12 +10,13 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route'
  */
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectToDatabase()
 
-    const menuItem = await MenuItem.findById(params.id).lean()
+    const { id } = await params
+    const menuItem = await MenuItem.findById(id).lean()
 
     if (!menuItem) {
       return NextResponse.json(
@@ -40,7 +41,7 @@ export async function GET(
  */
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -64,6 +65,8 @@ export async function PATCH(
     const { name, price, category, image, emoji, description, available } = body
 
     await connectToDatabase()
+
+    const { id } = await params
 
     const updateData: any = {}
     
@@ -90,7 +93,7 @@ export async function PATCH(
     if (available !== undefined) updateData.available = available
 
     const menuItem = await MenuItem.findByIdAndUpdate(
-      params.id,
+      id,
       updateData,
       { new: true }
     ).lean()
@@ -121,7 +124,7 @@ export async function PATCH(
  */
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -143,7 +146,8 @@ export async function DELETE(
 
     await connectToDatabase()
 
-    const menuItem = await MenuItem.findByIdAndDelete(params.id)
+    const { id } = await params
+    const menuItem = await MenuItem.findByIdAndDelete(id)
 
     if (!menuItem) {
       return NextResponse.json(

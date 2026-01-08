@@ -16,20 +16,50 @@ export const useSocket = (userRole?: 'admin' | 'customer', userId?: string) => {
   const socketRef = useRef<Socket | null>(null)
 
   useEffect(() => {
-    const socketInstance = io(
-      process.env.NODE_ENV === 'production'
+    // Only initialize socket if userRole is provided
+    if (!userRole) {
+      return
+    }
+
+    // In production, use external Socket.IO server (Render/Railway)
+    // In development, use local server (server.js) or fallback to separate socket server
+    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL 
+      || (process.env.NODE_ENV === 'production' 
         ? process.env.NEXTAUTH_URL || window.location.origin
-        : 'http://localhost:3000',
-      {
-        path: '/api/socket',
-        transports: ['websocket', 'polling'],
-      }
-    )
+        : window.location.origin) // Use same origin when using server.js (port 3000)
+
+    // Determine socket path based on URL
+    // If using server.js (localhost:3000), use /api/socket
+    // If using separate socket server (localhost:3001), use /socket.io
+    const socketPath = process.env.NEXT_PUBLIC_SOCKET_URL 
+      ? '/socket.io' // Separate socket server
+      : '/api/socket' // server.js (combined Next.js + Socket.IO)
+
+    const socketInstance = io(socketUrl, {
+      path: socketPath,
+      transports: ['websocket', 'polling'],
+      timeout: 5000, // 5 second timeout
+      reconnection: true,
+      reconnectionAttempts: 5, // Increased for production
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      autoConnect: true,
+    })
 
     socketRef.current = socketInstance
     setSocket(socketInstance)
 
+    // Set a timeout to handle connection failures gracefully
+    const connectionTimeout = setTimeout(() => {
+      if (!socketInstance.connected) {
+        console.warn('⚠️ Socket.IO connection timeout. Real-time features may not be available.')
+        setIsConnected(false)
+        // Don't disconnect, let it keep trying in the background
+      }
+    }, 6000)
+
     socketInstance.on('connect', () => {
+      clearTimeout(connectionTimeout)
       setIsConnected(true)
       console.log('🔌 Connected to socket')
 
@@ -58,12 +88,24 @@ export const useSocket = (userRole?: 'admin' | 'customer', userId?: string) => {
     })
 
     socketInstance.on('connect_error', (error) => {
-      console.error('🔥 Connection error:', error)
+      // Only log error, don't break the app
+      console.warn('⚠️ Socket.IO connection error (app will continue without real-time features):', error.message)
+      setIsConnected(false)
+      clearTimeout(connectionTimeout)
+    })
+
+    socketInstance.on('reconnect_attempt', () => {
+      console.log('🔄 Attempting to reconnect to Socket.IO...')
+    })
+
+    socketInstance.on('reconnect_failed', () => {
+      console.warn('⚠️ Socket.IO reconnection failed. Real-time features disabled.')
       setIsConnected(false)
     })
 
     // Listen for new orders (admin only)
     socketInstance.on('new-order', (data) => {
+      console.log('📥 Received new-order event:', data.order?.orderId || data.orderId)
       addNotification({
         id: Date.now().toString(),
         type: 'new-order',
@@ -75,6 +117,7 @@ export const useSocket = (userRole?: 'admin' | 'customer', userId?: string) => {
 
     // Listen for order status changes (customer only)
     socketInstance.on('order-status-changed', (data) => {
+      console.log('📥 Received order-status-changed event:', data.orderId, data.status)
       addNotification({
         id: Date.now().toString(),
         type: 'status-update',
@@ -83,6 +126,7 @@ export const useSocket = (userRole?: 'admin' | 'customer', userId?: string) => {
           orderId: data.orderId,
           status: data.status,
           estimatedTime: data.estimatedTime,
+          items: data.items, // Include items in notification
         },
         timestamp: data.timestamp
       })
@@ -118,9 +162,17 @@ export const useSocket = (userRole?: 'admin' | 'customer', userId?: string) => {
 
   const emitNewOrder = (orderData: any) => {
     if (socketRef.current?.connected) {
+      console.log('✅ Emitting order-placed event:', orderData.orderId)
       socketRef.current.emit('order-placed', orderData)
     } else {
-      console.warn('Socket not connected. Cannot emit order.')
+      console.warn('⚠️ Socket not connected. Cannot emit order. Will retry when connected.')
+      // Try to emit when socket connects
+      if (socketRef.current) {
+        socketRef.current.once('connect', () => {
+          console.log('🔄 Retrying order emission after connection')
+          socketRef.current?.emit('order-placed', orderData)
+        })
+      }
     }
   }
 
@@ -132,9 +184,17 @@ export const useSocket = (userRole?: 'admin' | 'customer', userId?: string) => {
     items?: Array<{ name: string; quantity: number; price: number }>
   }) => {
     if (socketRef.current?.connected) {
+      console.log('✅ Emitting order-status-update event:', updateData.orderId, updateData.status)
       socketRef.current.emit('order-status-update', updateData)
     } else {
-      console.warn('Socket not connected. Cannot emit status update.')
+      console.warn('⚠️ Socket not connected. Cannot emit status update. Will retry when connected.')
+      // Try to emit when socket connects
+      if (socketRef.current) {
+        socketRef.current.once('connect', () => {
+          console.log('🔄 Retrying status update emission after connection')
+          socketRef.current?.emit('order-status-update', updateData)
+        })
+      }
     }
   }
 

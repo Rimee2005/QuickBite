@@ -16,18 +16,27 @@ import { useLanguage } from "@/contexts/language-context"
 export default function CartPage() {
   const { toast } = useToast()
   const router = useRouter()
-  const { user, isAuthenticated } = useAuth()
+  const { user, isAuthenticated, isLoading } = useAuth()
   const { items, updateQuantity, removeItem, clearCart, getTotalPrice } = useCart()
   const [isPlacingOrder, setIsPlacingOrder] = useState(false)
   const { emitNewOrder, isConnected } = useSocket('customer', user?.id)
   const { t, getTranslatedName, language } = useLanguage()
 
-  // Redirect if not authenticated
+  // Redirect if not authenticated (wait for session to load)
   useEffect(() => {
-    if (!isAuthenticated || user?.type !== "student") {
+    if (!isLoading && (!isAuthenticated || user?.type !== "student")) {
       router.push("/login")
     }
-  }, [isAuthenticated, user, router])
+  }, [isLoading, isAuthenticated, user, router])
+
+  // Show loading state while session is loading
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-white dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    )
+  }
 
   const placeOrder = async () => {
     if (items.length === 0) {
@@ -100,18 +109,17 @@ export default function CartPage() {
       const order = data.order
 
       // Emit socket event for real-time notification to admin
-      if (isConnected) {
-        emitNewOrder({
-          orderId: order.orderId,
-          userId: user.id,
-          userName: user.name || 'Unknown',
-          userEmail: user.email || '',
-          items: order.items,
-          totalAmount: order.totalAmount,
-          status: order.status,
-          createdAt: order.createdAt,
-        })
-      }
+      console.log('📤 Emitting new order:', { orderId: order.orderId, isConnected })
+      emitNewOrder({
+        orderId: order.orderId,
+        userId: user.id,
+        userName: user.name || 'Unknown',
+        userEmail: user.email || '',
+        items: order.items,
+        totalAmount: order.totalAmount,
+        status: order.status,
+        createdAt: order.createdAt,
+      })
 
       // Clear cart after successful order
       clearCart()

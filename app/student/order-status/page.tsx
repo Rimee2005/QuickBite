@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
@@ -32,26 +32,31 @@ export default function OrderStatusPage() {
   const { toast } = useToast()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { user, isAuthenticated } = useAuth()
+  const { user, isAuthenticated, isLoading } = useAuth()
   const orderId = searchParams.get("orderId")
   const { notifications, isConnected } = useSocket('customer', user?.id)
   const { t, getTranslatedName, language } = useLanguage()
+  const processedNotificationsRef = useRef<Set<string>>(new Set())
+  const lastToastOrderIdRef = useRef<string | null>(null)
+  const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Redirect if not authenticated
+  // Redirect if not authenticated (wait for session to load)
   useEffect(() => {
-    if (!isAuthenticated || user?.type !== "student") {
+    if (!isLoading && (!isAuthenticated || user?.type !== "student")) {
       router.push("/login")
     }
-  }, [isAuthenticated, user, router])
+  }, [isLoading, isAuthenticated, user, router])
 
   // Fetch order from API
   useEffect(() => {
     if (!orderId) {
-      toast({
-        title: t("status.invalid_order"),
-        description: t("status.order_id_missing"),
-        variant: "destructive",
-      })
+      setTimeout(() => {
+        toast({
+          title: t("status.invalid_order"),
+          description: t("status.order_id_missing"),
+          variant: "destructive",
+        })
+      }, 0)
       router.push("/student/dashboard")
       return
     }
@@ -74,47 +79,82 @@ export default function OrderStatusPage() {
         }
       } catch (error) {
         console.error('Error fetching order:', error)
-        toast({
-          title: t("status.error"),
-          description: t("status.failed_load"),
-          variant: "destructive",
-        })
+        setTimeout(() => {
+          toast({
+            title: t("status.error"),
+            description: t("status.failed_load"),
+            variant: "destructive",
+          })
+        }, 0)
       } finally {
         setLoading(false)
       }
     }
 
     fetchOrder()
-  }, [orderId, router, toast])
+  }, [orderId, router, t]) // Removed toast from dependencies
 
   // Listen for real-time status updates via Socket.IO
   useEffect(() => {
-    if (notifications.length > 0) {
+    if (notifications.length > 0 && orderId) {
       const latestNotification = notifications[0]
       if (latestNotification.type === 'status-update' && latestNotification.data) {
         const updateData = latestNotification.data
+        const notificationId = latestNotification.id || `${updateData.orderId}-${updateData.status}`
+        
+        // Skip if already processed
+        if (processedNotificationsRef.current.has(notificationId)) {
+          return
+        }
+        
         if (updateData.orderId === orderId) {
+          processedNotificationsRef.current.add(notificationId)
+          
+          // Update status
           setStatus(updateData.status as any)
+          
           if (updateData.estimatedTime) {
             setEstimatedTime(updateData.estimatedTime)
             setTimeRemaining(updateData.estimatedTime * 60)
           }
+          
           updateProgress(updateData.status)
           
           // Update order items if provided in notification
-          if (updateData.items && order) {
+          if (updateData.items) {
             setOrder(prev => prev ? { ...prev, items: updateData.items } : null)
           }
           
-          // Use the message from server which includes order items
-          toast({
-            title: `${t("status.status_updated")} 🔔`,
-            description: latestNotification.message || 'Order status updated',
-          })
+          // Show toast with debounce to prevent infinite loops
+          if (lastToastOrderIdRef.current !== notificationId) {
+            lastToastOrderIdRef.current = notificationId
+            
+            // Clear any pending toast
+            if (toastTimeoutRef.current) {
+              clearTimeout(toastTimeoutRef.current)
+            }
+            
+            // Use setTimeout to call toast outside render cycle
+            toastTimeoutRef.current = setTimeout(() => {
+              toast({
+                title: `${t("status.status_updated")} 🔔`,
+                description: latestNotification.message || 'Order status updated',
+              })
+              toastTimeoutRef.current = null
+            }, 100)
+          }
         }
       }
     }
-  }, [notifications, orderId, toast, order])
+    
+    // Cleanup timeout on unmount
+    return () => {
+      if (toastTimeoutRef.current) {
+        clearTimeout(toastTimeoutRef.current)
+        toastTimeoutRef.current = null
+      }
+    }
+  }, [notifications, orderId, t]) // Removed toast and order from dependencies
 
   const updateProgress = (orderStatus: string) => {
     switch (orderStatus) {
@@ -152,6 +192,27 @@ export default function OrderStatusPage() {
     }
   }, [timeRemaining, status])
 
+  // Show loading state while session is loading (AFTER all hooks)
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-100 via-gray-50 to-white dark:from-gray-950 dark:via-gray-900 dark:to-gray-800 flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    )
+  }
+
+  // Show loading state while order is being fetched
+  if (loading || !order) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-100 via-gray-50 to-white dark:from-gray-950 dark:via-gray-900 dark:to-gray-800 flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="text-gray-600 dark:text-gray-300">{t("status.loading") || "Loading order details..."}</p>
+        </div>
+      </div>
+    )
+  }
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
     const secs = seconds % 60
@@ -163,20 +224,24 @@ export default function OrderStatusPage() {
 
       // Prevent duplicate submissions
       if (status === 'completed') {
-        toast({
-          title: t("status.already_completed") || "Order already completed",
-          description: t("status.already_completed_desc") || "This order has already been marked as completed.",
-        })
+        setTimeout(() => {
+          toast({
+            title: t("status.already_completed") || "Order already completed",
+            description: t("status.already_completed_desc") || "This order has already been marked as completed.",
+          })
+        }, 0)
         return
       }
 
       // Double check the order status before submitting
       if (order?.status === 'completed') {
         setStatus("completed")
-        toast({
-          title: t("status.already_completed") || "Order already completed",
-          description: t("status.already_completed_desc") || "This order has already been marked as completed.",
-        })
+        setTimeout(() => {
+          toast({
+            title: t("status.already_completed") || "Order already completed",
+            description: t("status.already_completed_desc") || "This order has already been marked as completed.",
+          })
+        }, 0)
         return
       }
 
@@ -198,10 +263,12 @@ export default function OrderStatusPage() {
             setStatus(refreshData.order.status)
           }
           
-          toast({
-            title: t("status.already_completed") || "Order already completed",
-            description: t("status.already_completed_desc") || "This order has already been marked as completed.",
-          })
+          setTimeout(() => {
+            toast({
+              title: t("status.already_completed") || "Order already completed",
+              description: t("status.already_completed_desc") || "This order has already been marked as completed.",
+            })
+          }, 0)
           return
         }
         
@@ -212,10 +279,12 @@ export default function OrderStatusPage() {
       setStatus("completed")
       setOrder((prev) => prev ? { ...prev, status: 'completed' } : null)
       
-      toast({
-        title: `✅ ${t("status.order_complete")}`,
-        description: t("status.order_complete_desc") || "Order marked as completed! Check your email for rating & review link.",
-      })
+      setTimeout(() => {
+        toast({
+          title: `✅ ${t("status.order_complete")}`,
+          description: t("status.order_complete_desc") || "Order marked as completed! Check your email for rating & review link.",
+        })
+      }, 0)
       
       // Redirect to review page after a short delay
       setTimeout(() => {
@@ -223,11 +292,13 @@ export default function OrderStatusPage() {
       }, 2000)
     } catch (error: any) {
       console.error('Error marking order as completed:', error)
-      toast({
-        title: t("status.error") || "Error",
-        description: error.message || t("status.failed_mark_completed") || "Failed to mark order as completed",
-        variant: "destructive",
-      })
+      setTimeout(() => {
+        toast({
+          title: t("status.error") || "Error",
+          description: error.message || t("status.failed_mark_completed") || "Failed to mark order as completed",
+          variant: "destructive",
+        })
+      }, 0)
     }
   }
 
@@ -251,17 +322,17 @@ export default function OrderStatusPage() {
   const getStatusColor = () => {
     switch (status) {
       case "pending":
-        return "from-yellow-400 to-orange-500"
+        return "from-yellow-500 to-orange-600 shadow-yellow-500/20"
       case "accepted":
-        return "from-blue-400 to-blue-600"
+        return "from-indigo-500 to-blue-600 shadow-indigo-500/20"
       case "preparing":
-        return "from-purple-400 to-purple-600"
+        return "from-purple-500 to-pink-600 shadow-purple-500/20"
       case "ready":
-        return "from-green-400 to-green-600"
+        return "from-blue-500 to-cyan-600 shadow-blue-500/20"
       case "completed":
-        return "from-emerald-400 to-emerald-600"
+        return "from-emerald-500 to-green-600 shadow-emerald-500/30"
       default:
-        return "from-gray-400 to-gray-600"
+        return "from-gray-400 to-gray-600 shadow-gray-500/20"
     }
   }
 
@@ -302,7 +373,12 @@ export default function OrderStatusPage() {
             <div className="flex items-center justify-end gap-3 sm:gap-4 flex-shrink-0">
               <div className="flex flex-col items-end gap-2">
                 <div className="text-3xl sm:text-4xl leading-none">{getStatusIcon()}</div>
-                <Badge className={`bg-gradient-to-r ${getStatusColor()} text-white border-0 text-xs sm:text-sm font-semibold px-2.5 py-1 shadow-md`}>
+                <Badge className={`bg-gradient-to-r ${getStatusColor()} text-white border-0 text-xs sm:text-sm font-bold px-3 py-1.5 rounded-full shadow-lg transition-all duration-300 hover:scale-105 ${status === "completed" ? "animate-pulse" : ""}`}>
+                  {status === "completed" && "✅ "}
+                  {status === "ready" && "🎉 "}
+                  {status === "preparing" && "👨‍🍳 "}
+                  {status === "accepted" && "✓ "}
+                  {status === "pending" && "⏳ "}
                   {status.charAt(0).toUpperCase() + status.slice(1)}
                 </Badge>
               </div>

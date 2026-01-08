@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
@@ -25,7 +25,7 @@ interface Order {
   status: string
 }
 
-export default function ReviewPage() {
+function ReviewPageContent() {
   const [order, setOrder] = useState<Order | null>(null)
   const [selectedItem, setSelectedItem] = useState<OrderItem | null>(null)
   const [rating, setRating] = useState<number>(0)
@@ -38,16 +38,25 @@ export default function ReviewPage() {
   const { toast } = useToast()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { user, isAuthenticated } = useAuth()
+  const { user, isAuthenticated, isLoading } = useAuth()
   const orderId = searchParams.get("orderId")
   const menuItemId = searchParams.get("menuItemId")
 
-  // Redirect if not authenticated
+  // Redirect if not authenticated (wait for session to load)
   useEffect(() => {
-    if (!isAuthenticated || user?.type !== "student") {
+    if (!isLoading && (!isAuthenticated || user?.type !== "student")) {
       router.push("/login")
     }
-  }, [isAuthenticated, user, router])
+  }, [isLoading, isAuthenticated, user, router])
+
+  // Show loading state while session is loading
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    )
+  }
 
   // Fetch order details and existing review
   useEffect(() => {
@@ -455,6 +464,21 @@ export default function ReviewPage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function ReviewPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-gray-100 via-gray-50 to-white dark:from-gray-950 dark:via-gray-900 dark:to-gray-800 flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="text-gray-600 dark:text-gray-300">Loading review page...</p>
+        </div>
+      </div>
+    }>
+      <ReviewPageContent />
+    </Suspense>
   )
 }
 

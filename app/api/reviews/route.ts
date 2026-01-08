@@ -13,10 +13,21 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
     const menuItemId = searchParams.get('menuItemId')
+    const orderId = searchParams.get('orderId')
+    const userId = searchParams.get('userId')
 
     await connectToDatabase()
 
-    const query = menuItemId ? { menuItemId } : {}
+    const query: any = {}
+    if (menuItemId) {
+      query.menuItemId = menuItemId
+    }
+    if (orderId) {
+      query.orderId = orderId
+    }
+    if (userId) {
+      query.userId = userId
+    }
 
     const reviews = await Review.find(query)
       .sort({ createdAt: -1 })

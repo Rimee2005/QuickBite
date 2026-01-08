@@ -11,7 +11,7 @@ import { sendEmail, getRatingReviewEmailTemplate } from '@/lib/email'
  */
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -25,8 +25,10 @@ export async function POST(
 
     await connectToDatabase()
 
+    const { id } = await params
+
     // Find the order
-    const order = await Order.findOne({ orderId: params.id }).lean()
+    const order = await Order.findOne({ orderId: id }).lean()
 
     if (!order) {
       return NextResponse.json(
@@ -61,7 +63,7 @@ export async function POST(
 
     // Update order status to completed
     const updatedOrder = await Order.findOneAndUpdate(
-      { orderId: params.id },
+      { orderId: id },
       { 
         status: 'completed',
         updatedAt: new Date(),

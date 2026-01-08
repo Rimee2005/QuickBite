@@ -15,7 +15,7 @@ import {
  */
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -29,7 +29,8 @@ export async function GET(
 
     await connectToDatabase()
 
-    const order = await Order.findOne({ orderId: params.id }).lean()
+    const { id } = await params
+    const order = await Order.findOne({ orderId: id }).lean()
 
     if (!order) {
       return NextResponse.json(
@@ -62,7 +63,7 @@ export async function GET(
  */
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -102,8 +103,10 @@ export async function PATCH(
 
     await connectToDatabase()
 
+    const { id } = await params
+
     // Get the old order to check previous status
-    const oldOrder = await Order.findOne({ orderId: params.id }).lean()
+    const oldOrder = await Order.findOne({ orderId: id }).lean()
     
     if (!oldOrder) {
       return NextResponse.json(
@@ -113,7 +116,7 @@ export async function PATCH(
     }
 
     const order = await Order.findOneAndUpdate(
-      { orderId: params.id },
+      { orderId: id },
       { 
         status,
         ...(estimatedTime && { estimatedTime }),

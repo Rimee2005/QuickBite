@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -38,6 +38,7 @@ export default function AdminDashboard() {
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const warningShownRef = useRef(false)
   const { toast } = useToast()
   const router = useRouter()
   const { t } = useLanguage()
@@ -58,11 +59,13 @@ export default function AdminDashboard() {
       }
     } catch (error) {
       console.error('Error fetching orders:', error)
-      toast({
-        title: t("admin.error_loading"),
-        description: t("admin.failed_fetch"),
-        variant: "destructive",
-      })
+      setTimeout(() => {
+        toast({
+          title: t("admin.error_loading"),
+          description: t("admin.failed_fetch"),
+          variant: "destructive",
+        })
+      }, 0)
     } finally {
       setLoading(false)
     }
@@ -74,29 +77,86 @@ export default function AdminDashboard() {
   }, [])
 
   // Listen for new orders via Socket.IO
+  const processedNotificationsRef = useRef<Set<string>>(new Set())
+  const lastToastOrderIdRef = useRef<string | null>(null)
+  const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  
+  // Handle notifications - update orders only (toast removed to prevent infinite loops)
   useEffect(() => {
     if (notifications.length > 0) {
       const latestNotification = notifications[0]
       if (latestNotification.type === 'new-order' && latestNotification.data) {
         const newOrder = latestNotification.data as Order
-        setOrders((prev) => [newOrder, ...prev])
-        toast({
-          title: `🛒 ${t("admin.new_order_received")}`,
-          description: `${t("admin.order_from")} ${newOrder.orderId} ${t("admin.from")} ${newOrder.userName}`,
+        const notificationId = latestNotification.id || newOrder.orderId
+        
+        // Skip if already processed
+        if (processedNotificationsRef.current.has(notificationId)) {
+          return
+        }
+        
+        processedNotificationsRef.current.add(notificationId)
+        console.log('📦 New order received via socket:', newOrder.orderId)
+        
+        // Check if order already exists to avoid duplicates
+        setOrders((prev) => {
+          const exists = prev.some(o => o.orderId === newOrder.orderId)
+          if (exists) {
+            console.log('Order already exists, skipping:', newOrder.orderId)
+            return prev
+          }
+          return [newOrder, ...prev]
         })
+        
+        // Toast removed - causes infinite loop with Radix UI
+        // Orders will still update in real-time, just no toast notification
       }
     }
-  }, [notifications, toast])
+  }, [notifications]) // Only depend on notifications array
+
+  // Debug: Log socket connection status
+  useEffect(() => {
+    console.log('🔌 Admin Socket Status:', { isConnected, notificationsCount: notifications.length })
+  }, [isConnected, notifications.length])
+
+  // Show warning if socket is not connected (only once, no toast to avoid loops)
+  useEffect(() => {
+    if (!isConnected && !warningShownRef.current) {
+      const timer = setTimeout(() => {
+        if (!isConnected && !warningShownRef.current) {
+          warningShownRef.current = true
+          console.warn('⚠️ Socket.IO is not connected. Real-time features disabled.')
+          console.warn('💡 To enable real-time updates, run: npm run dev:socket')
+          // Removed toast to prevent infinite loops - use console warning instead
+        }
+      }, 3000)
+      return () => clearTimeout(timer)
+    } else if (isConnected) {
+      // Reset warning flag when connected
+      warningShownRef.current = false
+    }
+  }, [isConnected]) // Removed toast from dependencies
 
   // Update order status
+  const updatingOrdersRef = useRef<Set<string>>(new Set())
   const updateOrderStatus = async (
     orderId: string, 
     status: 'accepted' | 'preparing' | 'ready',
     estimatedTime?: number
   ) => {
+    // Prevent duplicate updates
+    if (updatingOrdersRef.current.has(orderId)) {
+      console.log('Order update already in progress:', orderId)
+      return
+    }
+    
     try {
+      updatingOrdersRef.current.add(orderId)
+      
       const order = orders.find(o => o.orderId === orderId)
-      if (!order) return
+      if (!order) {
+        updatingOrdersRef.current.delete(orderId)
+        return
+      }
 
       const response = await fetch(`/api/orders/${orderId}`, {
         method: 'PATCH',
@@ -117,40 +177,62 @@ export default function AdminDashboard() {
       setOrders((prev) =>
         prev.map((o) => (o.orderId === orderId ? updatedOrder : o))
       )
+      
+      // Remove from updating set after a delay
+      setTimeout(() => {
+        updatingOrdersRef.current.delete(orderId)
+      }, 1000)
 
       // Emit socket event to notify customer (include order items)
-      if (isConnected) {
-        emitStatusUpdate({
-          orderId: updatedOrder.orderId,
-          status: updatedOrder.status,
-          userId: updatedOrder.userId,
-          estimatedTime: updatedOrder.estimatedTime,
-          items: updatedOrder.items, // Include order items
-        })
-      }
-
-      toast({
-        title: `${t("admin.status_updated")} ✅`,
-        description: t("admin.status_updated_desc"),
+      console.log('📤 Emitting status update:', { orderId: updatedOrder.orderId, status: updatedOrder.status, isConnected })
+      emitStatusUpdate({
+        orderId: updatedOrder.orderId,
+        status: updatedOrder.status,
+        userId: updatedOrder.userId,
+        estimatedTime: updatedOrder.estimatedTime,
+        items: updatedOrder.items, // Include order items
       })
+
+      // Use setTimeout to call toast outside render cycle, with debounce
+      if (toastTimeoutRef.current) {
+        clearTimeout(toastTimeoutRef.current)
+      }
+      
+      // Only show toast if this is a different order or enough time has passed
+      if (lastToastOrderIdRef.current !== orderId) {
+        lastToastOrderIdRef.current = orderId
+        toastTimeoutRef.current = setTimeout(() => {
+          toast({
+            title: `${t("admin.status_updated")} ✅`,
+            description: t("admin.status_updated_desc"),
+          })
+          toastTimeoutRef.current = null
+        }, 100)
+      }
     } catch (error: any) {
       console.error('Error updating order status:', error)
-      toast({
-        title: `${t("admin.error_updating")} ❌`,
-        description: error.message || t("admin.error_updating_desc"),
-        variant: "destructive",
-      })
+      updatingOrdersRef.current.delete(orderId)
+      // Use setTimeout to call toast outside render cycle
+      setTimeout(() => {
+        toast({
+          title: `${t("admin.error_updating")} ❌`,
+          description: error.message || t("admin.error_updating_desc"),
+          variant: "destructive",
+        })
+      }, 0)
     }
   }
 
   // Accept order (with ETA)
   const acceptOrder = (orderId: string, eta: number) => {
     if (!eta) {
-      toast({
-        title: `${t("admin.set_eta_first")} ⏰`,
-        description: t("admin.set_eta_first_desc"),
-        variant: "destructive",
-      })
+      setTimeout(() => {
+        toast({
+          title: `${t("admin.set_eta_first")} ⏰`,
+          description: t("admin.set_eta_first_desc"),
+          variant: "destructive",
+        })
+      }, 0)
       return
     }
     updateOrderStatus(orderId, 'accepted', eta)
@@ -169,14 +251,19 @@ export default function AdminDashboard() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "pending":
-        return "bg-yellow-100 text-yellow-800 hover:bg-yellow-100 dark:bg-yellow-900 dark:text-yellow-200"
+        return "bg-gradient-to-r from-yellow-500 to-orange-600 text-white border-0 shadow-md shadow-yellow-500/20"
       case "accepted":
+        return "bg-gradient-to-r from-indigo-500 to-blue-600 text-white border-0 shadow-md shadow-indigo-500/20"
       case "preparing":
-        return "bg-blue-100 text-blue-800 hover:bg-blue-100 dark:bg-blue-900 dark:text-blue-200"
+        return "bg-gradient-to-r from-purple-500 to-pink-600 text-white border-0 shadow-md shadow-purple-500/20"
       case "ready":
-        return "bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-900 dark:text-green-200"
+        return "bg-gradient-to-r from-blue-500 to-cyan-600 text-white border-0 shadow-md shadow-blue-500/20"
+      case "completed":
+        return "bg-gradient-to-r from-emerald-500 to-green-600 text-white border-0 shadow-lg shadow-emerald-500/30"
+      case "cancelled":
+        return "bg-gradient-to-r from-red-500 to-rose-600 text-white border-0 shadow-md shadow-red-500/20"
       default:
-        return "bg-gray-100 text-gray-800 hover:bg-gray-100 dark:bg-gray-700 dark:text-gray-200"
+        return "bg-gray-500 text-white border-0"
     }
   }
 
@@ -194,10 +281,12 @@ export default function AdminDashboard() {
   }
 
   const handleLogout = () => {
-    toast({
-      title: "Admin logged out! 👋",
-      description: "Session ended successfully",
-    })
+    setTimeout(() => {
+      toast({
+        title: "Admin logged out! 👋",
+        description: "Session ended successfully",
+      })
+    }, 0)
     router.push("/")
   }
 
@@ -327,11 +416,13 @@ export default function AdminDashboard() {
                           <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                             {formatOrderTime(order.createdAt)}
                           </span>
-                          <Badge className={`${getStatusColor(order.status)} text-xs sm:text-sm px-2 py-1`}>
+                          <Badge className={`${getStatusColor(order.status)} text-xs sm:text-sm px-3 py-1.5 rounded-full font-bold transition-all duration-300 hover:scale-105 ${order.status === "completed" ? "animate-pulse" : ""}`}>
                             {order.status === "pending" && "⏳ Pending"}
                             {order.status === "accepted" && "✅ Accepted"}
                             {order.status === "preparing" && "👨‍🍳 Preparing"}
                             {order.status === "ready" && "🎉 Ready"}
+                            {order.status === "completed" && "✅ Completed"}
+                            {order.status === "cancelled" && "✗ Cancelled"}
                           </Badge>
                         </div>
                       </div>

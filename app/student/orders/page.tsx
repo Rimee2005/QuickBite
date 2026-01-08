@@ -1,62 +1,120 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ArrowLeft, Star } from "lucide-react"
 import Link from "next/link"
 import { useLanguage } from "@/contexts/language-context"
+import { useAuth } from "@/contexts/auth-context"
+import { useRouter } from "next/navigation"
 
-interface Order {
-  id: string
-  date: string
-  time: string
-  items: string[]
-  total: number
-  status: "picked-up" | "cancelled"
-  rating?: number
+interface OrderItem {
+  menuItemId: string
+  name: string | { en: string; hi?: string; mai?: string; bho?: string }
+  quantity: number
+  price: number
 }
 
-const orders: Order[] = [
-  {
-    id: "#QB-1321",
-    date: "2024-01-15",
-    time: "12:30 PM",
-    items: ["1x Burger 🍔", "1x Cold Coffee ☕"],
-    total: 110,
-    status: "picked-up",
-    rating: 5,
-  },
-  {
-    id: "#QB-1320",
-    date: "2024-01-14",
-    time: "1:15 PM",
-    items: ["2x Samosa 🥟", "1x Mango Juice 🥭"],
-    total: 65,
-    status: "picked-up",
-    rating: 4,
-  },
-  {
-    id: "#QB-1319",
-    date: "2024-01-13",
-    time: "11:45 AM",
-    items: ["1x Chicken Biryani 🍛"],
-    total: 120,
-    status: "cancelled",
-  },
-  {
-    id: "#QB-1318",
-    date: "2024-01-12",
-    time: "2:00 PM",
-    items: ["1x French Fries 🍟", "1x Cold Coffee ☕"],
-    total: 90,
-    status: "picked-up",
-    rating: 5,
-  },
-]
+interface Order {
+  orderId: string
+  userId: string
+  userName: string
+  userEmail: string
+  items: OrderItem[]
+  totalAmount: number
+  status: "pending" | "accepted" | "preparing" | "ready" | "completed" | "cancelled"
+  createdAt: string
+  updatedAt: string
+  rating?: number // Average rating for the order
+}
+
+interface Review {
+  menuItemId: string
+  rating: number
+}
 
 export default function OrderHistoryPage() {
-  const { t } = useLanguage()
+  const [orders, setOrders] = useState<Order[]>([])
+  const [loading, setLoading] = useState(true)
+  const [reviews, setReviews] = useState<Record<string, Review[]>>({}) // orderId -> reviews
+  const { t, getTranslatedName } = useLanguage()
+  const { user, isAuthenticated, isLoading } = useAuth()
+  const router = useRouter()
+
+  // Redirect if not authenticated (wait for session to load)
+  useEffect(() => {
+    if (!isLoading && (!isAuthenticated || user?.type !== "student")) {
+      router.push("/login")
+    }
+  }, [isLoading, isAuthenticated, user, router])
+
+  // Show loading state while session is loading
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    )
+  }
+
+  // Fetch orders from API
+  useEffect(() => {
+    if (!isAuthenticated || user?.type !== "student") {
+      return
+    }
+
+    const fetchOrders = async () => {
+      try {
+        const response = await fetch("/api/orders")
+        if (response.ok) {
+          const data = await response.json()
+          setOrders(data.orders || [])
+        } else {
+          console.error("Failed to fetch orders")
+        }
+      } catch (error) {
+        console.error("Error fetching orders:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchOrders()
+  }, [isAuthenticated, user])
+
+  // Fetch reviews for completed orders
+  useEffect(() => {
+    if (orders.length === 0 || !user?.id) return
+
+    const fetchReviews = async () => {
+      try {
+        const completedOrders = orders.filter(o => o.status === "completed")
+        if (completedOrders.length === 0) return
+
+        // Fetch all reviews for the user, then filter by orderId
+        const response = await fetch(`/api/reviews?userId=${user.id}`)
+        if (response.ok) {
+          const data = await response.json()
+          const allReviews = data.reviews || []
+          
+          // Group reviews by orderId
+          const reviewsMap: Record<string, Review[]> = {}
+          completedOrders.forEach(order => {
+            reviewsMap[order.orderId] = allReviews.filter(
+              (review: any) => review.orderId === order.orderId
+            )
+          })
+          setReviews(reviewsMap)
+        }
+      } catch (error) {
+        console.error("Error fetching reviews:", error)
+      }
+    }
+
+    fetchReviews()
+  }, [orders, user?.id])
 
   const renderStars = (rating: number) => {
     return Array.from({ length: 5 }, (_, i) => (
@@ -69,6 +127,99 @@ export default function OrderHistoryPage() {
         }`} 
       />
     ))
+  }
+
+  const getStatusDisplay = (status: Order["status"]) => {
+    switch (status) {
+      case "completed":
+        return { 
+          label: t("orders.status.completed") || "Completed", 
+          icon: "✅",
+          className: "bg-gradient-to-r from-emerald-500 to-green-600 text-white border-0 shadow-lg shadow-emerald-500/30",
+          iconClassName: "animate-pulse"
+        }
+      case "ready":
+        return { 
+          label: t("orders.status.ready") || "Ready", 
+          icon: "🎉",
+          className: "bg-gradient-to-r from-blue-500 to-cyan-600 text-white border-0 shadow-md shadow-blue-500/20",
+          iconClassName: ""
+        }
+      case "preparing":
+        return { 
+          label: t("orders.status.preparing") || "Preparing", 
+          icon: "👨‍🍳",
+          className: "bg-gradient-to-r from-purple-500 to-pink-600 text-white border-0 shadow-md shadow-purple-500/20",
+          iconClassName: ""
+        }
+      case "accepted":
+        return { 
+          label: t("orders.status.accepted") || "Accepted", 
+          icon: "✓",
+          className: "bg-gradient-to-r from-indigo-500 to-blue-600 text-white border-0 shadow-md shadow-indigo-500/20",
+          iconClassName: ""
+        }
+      case "pending":
+        return { 
+          label: t("orders.status.pending") || "Pending", 
+          icon: "⏳",
+          className: "bg-gradient-to-r from-yellow-500 to-orange-600 text-white border-0 shadow-md shadow-yellow-500/20",
+          iconClassName: "animate-pulse"
+        }
+      case "cancelled":
+        return { 
+          label: t("orders.status.cancelled") || "Cancelled", 
+          icon: "✗",
+          className: "bg-gradient-to-r from-red-500 to-rose-600 text-white border-0 shadow-md shadow-red-500/20",
+          iconClassName: ""
+        }
+      default:
+        return { 
+          label: status, 
+          icon: "•",
+          className: "bg-gray-500 text-white border-0",
+          iconClassName: ""
+        }
+    }
+  }
+
+  const formatDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString)
+      return date.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      })
+    } catch {
+      return dateString
+    }
+  }
+
+  const formatTime = (dateString: string) => {
+    try {
+      const date = new Date(dateString)
+      return date.toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      })
+    } catch {
+      return dateString
+    }
+  }
+
+  // Calculate average rating for an order
+  const getOrderRating = (order: Order): number | undefined => {
+    const orderReviews = reviews[order.orderId] || []
+    if (orderReviews.length === 0) return undefined
+    
+    const totalRating = orderReviews.reduce((sum, review) => sum + review.rating, 0)
+    return Math.round((totalRating / orderReviews.length) * 10) / 10 // Round to 1 decimal
+  }
+
+  if (!isAuthenticated || user?.type !== "student") {
+    return null // Will redirect
   }
 
   return (
@@ -103,10 +254,11 @@ export default function OrderHistoryPage() {
         )}
 
         {/* Orders List */}
-        {!loading && (
+        {!loading && orders.length > 0 && (
           <div className="space-y-4 sm:space-y-5">
             {orders.map((order, index) => {
               const statusDisplay = getStatusDisplay(order.status)
+              const orderRating = getOrderRating(order)
               return (
                 <Card 
                   key={order.orderId} 
@@ -126,13 +278,10 @@ export default function OrderHistoryPage() {
                             #{order.orderId}
                           </h3>
                           <Badge
-                            className={`font-semibold text-xs sm:text-sm px-2.5 py-1 rounded-full ${
-                              statusDisplay.isPickedUp
-                                ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700"
-                                : "bg-red-50 text-red-700 dark:bg-red-900/40 dark:text-red-300 border border-red-200 dark:border-red-700"
-                            }`}
+                            className={`font-bold text-xs sm:text-sm px-3 py-1.5 rounded-full transition-all duration-300 hover:scale-105 ${statusDisplay.className} ${statusDisplay.iconClassName}`}
                           >
-                            {statusDisplay.isPickedUp ? `✓ ${statusDisplay.label}` : `✗ ${statusDisplay.label}`}
+                            <span className="mr-1.5">{statusDisplay.icon}</span>
+                            {statusDisplay.label}
                           </Badge>
                         </div>
                         <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">
@@ -176,13 +325,13 @@ export default function OrderHistoryPage() {
                         </span>
                       </div>
 
-                      {order.rating && (
+                      {orderRating && (
                         <div className="flex items-center gap-3 bg-amber-50 dark:bg-amber-900/20 rounded-xl px-4 py-2.5 border border-amber-200 dark:border-amber-800/50">
                           <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t("orders.your_rating") || "Your Rating:"}</span>
                           <div className="flex items-center gap-1">
-                            {renderStars(order.rating)}
+                            {renderStars(Math.round(orderRating))}
                             <span className="ml-2 text-sm font-bold text-amber-700 dark:text-amber-400">
-                              {order.rating}/5
+                              {orderRating}/5
                             </span>
                           </div>
                         </div>
@@ -196,7 +345,7 @@ export default function OrderHistoryPage() {
         )}
 
         {/* Empty State */}
-        {orders.length === 0 && (
+        {!loading && orders.length === 0 && (
           <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-8 sm:p-12 text-center transform hover:scale-105 transition-all duration-300">
             <div className="text-6xl sm:text-7xl mb-6 animate-bounce">📋</div>
             <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-3">

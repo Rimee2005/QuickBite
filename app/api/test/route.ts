@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import clientPromise from '@/lib/mongodb'
+import { connectToDatabase } from '@/lib/mongodb'
+import mongoose from 'mongoose'
 
 export async function GET() {
   if (!process.env.MONGODB_URI) {
@@ -12,8 +13,13 @@ export async function GET() {
 
   try {
     console.log("Attempting to connect to MongoDB...")
-    const client = await clientPromise
-    const db = client.db("quickbite")
+    const connection = await connectToDatabase()
+    
+    if (!connection) {
+      throw new Error('Failed to establish connection')
+    }
+
+    const db = connection.connection.db
 
     // Test the connection by listing collections
     console.log("Connected, fetching collections...")
