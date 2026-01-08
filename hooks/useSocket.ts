@@ -18,32 +18,46 @@ export const useSocket = (userRole?: 'admin' | 'customer', userId?: string) => {
   useEffect(() => {
     // Only initialize socket if userRole is provided
     if (!userRole) {
+      console.log('🔌 Socket initialization skipped: userRole not provided')
       return
     }
 
-    // In production, use external Socket.IO server (Render/Railway)
-    // In development, use local server (server.js) or fallback to separate socket server
-    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL 
-      || (process.env.NODE_ENV === 'production' 
-        ? process.env.NEXTAUTH_URL || window.location.origin
-        : window.location.origin) // Use same origin when using server.js (port 3000)
+    // Prevent multiple initializations
+    if (socketRef.current?.connected || socketRef.current?.connecting) {
+      console.log('🔌 Socket already initialized, skipping...')
+      return
+    }
 
+    // Get socket URL from environment variable or fallback
+    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3000'
+    
     // Determine socket path based on URL
-    // If using server.js (localhost:3000), use /api/socket
-    // If using separate socket server (localhost:3001), use /socket.io
-    const socketPath = process.env.NEXT_PUBLIC_SOCKET_URL 
-      ? '/socket.io' // Separate socket server
-      : '/api/socket' // server.js (combined Next.js + Socket.IO)
+    // If using external server (Render), use /socket.io
+    // If using local server.js, use /api/socket
+    const isExternalServer = socketUrl.includes('render.com') || 
+                             socketUrl.includes('railway.app') || 
+                             socketUrl.includes('onrender.com') ||
+                             process.env.NEXT_PUBLIC_SOCKET_URL
+    
+    const socketPath = isExternalServer ? '/socket.io' : '/api/socket'
+
+    console.log('🔌 Initializing Socket.IO connection:', {
+      url: socketUrl,
+      path: socketPath,
+      userRole,
+      userId
+    })
 
     const socketInstance = io(socketUrl, {
       path: socketPath,
       transports: ['websocket', 'polling'],
-      timeout: 5000, // 5 second timeout
+      timeout: 10000, // 10 second timeout for external servers
       reconnection: true,
-      reconnectionAttempts: 5, // Increased for production
+      reconnectionAttempts: Infinity, // Keep trying to reconnect
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
       autoConnect: true,
+      forceNew: true, // Force new connection to avoid reuse issues
     })
 
     socketRef.current = socketInstance
@@ -61,12 +75,19 @@ export const useSocket = (userRole?: 'admin' | 'customer', userId?: string) => {
     socketInstance.on('connect', () => {
       clearTimeout(connectionTimeout)
       setIsConnected(true)
-      console.log('🔌 Connected to socket')
+      console.log('✅ Socket.IO connected successfully:', {
+        socketId: socketInstance.id,
+        userRole,
+        userId,
+        url: socketUrl
+      })
 
       // Join appropriate rooms based on user role
       if (userRole === 'admin') {
+        console.log('👤 Joining admin room...')
         socketInstance.emit('join-room', { room: 'admin', userType: 'admin' })
       } else if (userRole === 'customer') {
+        console.log('👤 Joining customer rooms...', { userId })
         socketInstance.emit('join-room', { 
           room: 'customer', 
           userType: 'customer',
@@ -82,8 +103,13 @@ export const useSocket = (userRole?: 'admin' | 'customer', userId?: string) => {
       }
     })
 
-    socketInstance.on('disconnect', () => {
-      console.log('❌ Disconnected from socket')
+    socketInstance.on('disconnect', (reason) => {
+      console.log('❌ Socket.IO disconnected:', {
+        reason,
+        socketId: socketInstance.id,
+        userRole,
+        userId
+      })
       setIsConnected(false)
     })
 
@@ -117,7 +143,14 @@ export const useSocket = (userRole?: 'admin' | 'customer', userId?: string) => {
 
     // Listen for order status changes (customer only)
     socketInstance.on('order-status-changed', (data) => {
-      console.log('📥 Received order-status-changed event:', data.orderId, data.status)
+      console.log('📥 Received order-status-changed event:', {
+        orderId: data.orderId,
+        status: data.status,
+        estimatedTime: data.estimatedTime,
+        message: data.message,
+        timestamp: data.timestamp,
+        userId
+      })
       addNotification({
         id: Date.now().toString(),
         type: 'status-update',
@@ -143,16 +176,31 @@ export const useSocket = (userRole?: 'admin' | 'customer', userId?: string) => {
     })
 
     return () => {
-      socketInstance.disconnect()
+      console.log('🧹 Cleaning up Socket.IO connection:', { userRole, userId })
+      if (socketInstance.connected) {
+        socketInstance.disconnect()
+      }
+      socketRef.current = null
+      setSocket(null)
+      setIsConnected(false)
     }
-  }, [userRole, userId])
+  }, [userRole, userId]) // Only re-run if userRole or userId changes
 
   const addNotification = (notification: SocketNotification) => {
-    setNotifications((prev: SocketNotification[]) => [
-      notification,
-      ...prev.slice(0, 9)
-    ])
+    // Prevent duplicate notifications
+    setNotifications((prev: SocketNotification[]) => {
+      const exists = prev.some(n => n.id === notification.id)
+      if (exists) {
+        console.log('⚠️ Duplicate notification skipped:', notification.id)
+        return prev
+      }
+      return [
+        notification,
+        ...prev.slice(0, 9) // Keep max 10 notifications
+      ]
+    })
 
+    // Auto-remove notification after 5 seconds
     setTimeout(() => {
       setNotifications((prev: SocketNotification[]) =>
         prev.filter((n: SocketNotification) => n.id !== notification.id)

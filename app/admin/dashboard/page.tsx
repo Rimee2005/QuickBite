@@ -184,7 +184,14 @@ export default function AdminDashboard() {
       }, 1000)
 
       // Emit socket event to notify customer (include order items)
-      console.log('📤 Emitting status update:', { orderId: updatedOrder.orderId, status: updatedOrder.status, isConnected })
+      console.log('📤 Emitting order status update to customer:', {
+        orderId: updatedOrder.orderId,
+        status: updatedOrder.status,
+        userId: updatedOrder.userId,
+        estimatedTime: updatedOrder.estimatedTime,
+        itemsCount: updatedOrder.items?.length || 0,
+        isConnected
+      })
       emitStatusUpdate({
         orderId: updatedOrder.orderId,
         status: updatedOrder.status,

@@ -104,11 +104,19 @@ export default function OrderStatusPage() {
         
         // Skip if already processed
         if (processedNotificationsRef.current.has(notificationId)) {
+          console.log('⚠️ Order status update already processed:', notificationId)
           return
         }
         
         if (updateData.orderId === orderId) {
           processedNotificationsRef.current.add(notificationId)
+          
+          console.log('📥 Processing order status update:', {
+            orderId: updateData.orderId,
+            status: updateData.status,
+            estimatedTime: updateData.estimatedTime,
+            hasItems: !!updateData.items
+          })
           
           // Update status
           setStatus(updateData.status as any)
