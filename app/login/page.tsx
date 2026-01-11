@@ -25,10 +25,23 @@ export default function LoginPage() {
   const { t } = useLanguage()
 
   // Check if user is already logged in and redirect
+  // Add timeout to prevent hanging
   useEffect(() => {
+    let isMounted = true
+    let timeoutId: NodeJS.Timeout
+
     const checkExistingSession = async () => {
       try {
-        const session = await getSession()
+        // Set timeout to prevent hanging (max 2 seconds)
+        const sessionPromise = getSession()
+        const timeoutPromise = new Promise((_, reject) => {
+          timeoutId = setTimeout(() => reject(new Error('Session check timeout')), 2000)
+        })
+
+        const session = await Promise.race([sessionPromise, timeoutPromise]) as any
+
+        if (!isMounted) return
+
         if (session?.user) {
           // User is already logged in, redirect to appropriate dashboard
           const userType = session.user.type || 'student'
@@ -42,16 +55,34 @@ export default function LoginPage() {
           // Use window.location in production to avoid middleware issues
           if (typeof window !== 'undefined') {
             window.location.href = redirectPath
+            return // Don't set isCheckingSession to false if redirecting
           }
         }
       } catch (error) {
-        console.error('Error checking session:', error)
+        // Silently fail - let middleware handle redirects
+        // Don't log errors in production to avoid console spam
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Error checking session:', error)
+        }
       } finally {
-        setIsCheckingSession(false)
+        if (isMounted) {
+          clearTimeout(timeoutId)
+          setIsCheckingSession(false)
+        }
       }
     }
 
-    checkExistingSession()
+    // Only check session in client-side
+    if (typeof window !== 'undefined') {
+      checkExistingSession()
+    } else {
+      setIsCheckingSession(false)
+    }
+
+    return () => {
+      isMounted = false
+      if (timeoutId) clearTimeout(timeoutId)
+    }
   }, [])
 
   const handleChange = (field: string, value: string) => {
@@ -123,6 +154,16 @@ export default function LoginPage() {
       setIsLoading(false)
     }
   }
+
+  // Auto-hide loading after 2 seconds as fallback to prevent hanging
+  useEffect(() => {
+    if (isCheckingSession) {
+      const timeout = setTimeout(() => {
+        setIsCheckingSession(false)
+      }, 2000)
+      return () => clearTimeout(timeout)
+    }
+  }, [isCheckingSession])
 
   // Show loading while checking session
   if (isCheckingSession) {
