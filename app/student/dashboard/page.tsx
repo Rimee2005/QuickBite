@@ -103,6 +103,7 @@ export default function StudentDashboard() {
   ]
 
   // Redirect if not authenticated (wait for session to load)
+  // Allow both students and teachers (teachers use student dashboard)
   useEffect(() => {
     // Don't redirect while session is still loading
     if (isLoading) {
@@ -111,10 +112,15 @@ export default function StudentDashboard() {
     
     // Only redirect if we're sure the user is not authenticated
     // Give it a moment for session to establish after login
-    // Allow both students and teachers (teachers use student dashboard)
     const checkAuth = setTimeout(() => {
-      if (!isAuthenticated || (user && user.type !== "student" && user.type !== "teacher")) {
-        router.push("/login")
+      // Allow students and teachers (both use student dashboard)
+      // Only redirect if not authenticated or if user is admin (admin has separate dashboard)
+      if (!isAuthenticated || (user && user.type === "admin")) {
+        if (user?.type === "admin") {
+          router.push("/admin/dashboard")
+        } else {
+          router.push("/login")
+        }
       }
     }, 500) // Wait 500ms for session to establish
     
@@ -177,7 +183,7 @@ export default function StudentDashboard() {
 
   // Don't render anything while redirecting
   // Allow both students and teachers (teachers use student dashboard)
-  if (!isAuthenticated || (user?.type !== "student" && user?.type !== "teacher")) {
+  if (!isAuthenticated || (user && user.type === "admin")) {
     return null
   }
 
