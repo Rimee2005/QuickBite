@@ -7,9 +7,10 @@ export default withAuth(
     const token = req.nextauth.token
     const isAdminRoute = req.nextUrl.pathname.startsWith("/admin")
     const isStudentRoute = req.nextUrl.pathname.startsWith("/student")
+    const isTeacherRoute = req.nextUrl.pathname.startsWith("/teacher")
 
-    // Redirect admin trying to access student routes
-    if (isStudentRoute && token?.type === "admin") {
+    // Redirect admin trying to access student or teacher routes
+    if ((isStudentRoute || isTeacherRoute) && token?.type === "admin") {
       return NextResponse.redirect(new URL("/admin/dashboard", req.url))
     }
 
@@ -32,6 +33,7 @@ export default withAuth(
 
         const isAdminRoute = pathname.startsWith("/admin")
         const isStudentRoute = pathname.startsWith("/student")
+        const isTeacherRoute = pathname.startsWith("/teacher")
         const isAuthRoute = pathname.startsWith("/login") || 
                           pathname.startsWith("/register") ||
                           pathname.startsWith("/admin/login") ||
@@ -42,7 +44,7 @@ export default withAuth(
         if (isAuthRoute) return true
 
         // Require authentication for protected routes
-        if (isAdminRoute || isStudentRoute) {
+        if (isAdminRoute || isStudentRoute || isTeacherRoute) {
           return !!token
         }
 
@@ -58,6 +60,7 @@ export const config = {
   matcher: [
     "/admin/:path*",
     "/student/:path*",
+    "/teacher/:path*",
     "/login",
     "/register",
   ],

@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
 
     await connectToDatabase()
 
-    // Admin can see all orders, students see only their orders
+    // Admin can see all orders, students and teachers see only their orders
     const query = session.user.type === 'admin' 
       ? {} 
       : { userId: session.user.id }

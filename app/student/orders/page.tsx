@@ -230,7 +230,8 @@ export default function OrderHistoryPage() {
     return Math.round((totalRating / orderReviews.length) * 10) / 10 // Round to 1 decimal
   }
 
-  if (!isAuthenticated || user?.type !== "student") {
+  // Allow both students and teachers (teachers use student dashboard)
+  if (!isAuthenticated || (user && user.type === "admin")) {
     return null // Will redirect
   }
 
@@ -240,7 +241,7 @@ export default function OrderHistoryPage() {
         {/* Header */}
         <div className="mb-8 sm:mb-10">
           <div className="flex items-center gap-3 sm:gap-4 mb-6">
-            <Link href="/student/dashboard">
+            <Link href={user?.type === "teacher" ? "/teacher/dashboard" : "/student/dashboard"}>
               <Button 
                 variant="outline"
                 size="sm"
@@ -366,7 +367,7 @@ export default function OrderHistoryPage() {
             <p className="text-gray-600 dark:text-gray-400 mb-8 text-base sm:text-lg">
               {t("orders.no_orders_desc") || "Your order history will appear here once you place your first order"}
             </p>
-            <Link href="/student/dashboard">
+            <Link href={user?.type === "teacher" ? "/teacher/dashboard" : "/student/dashboard"}>
               <Button className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6 py-3 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105">
                 {t("orders.browse_menu") || "Browse Menu"}
               </Button>

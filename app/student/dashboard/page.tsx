@@ -200,7 +200,7 @@ export default function StudentDashboard() {
 
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center space-x-3">
-              <Link href="/student/orders">
+              <Link href={user?.type === "teacher" ? "/teacher/orders" : "/student/orders"}>
                 <Button variant="ghost" className="text-gray-600 dark:text-gray-300">
                   {t("dashboard.my_orders")}
                 </Button>
@@ -249,7 +249,7 @@ export default function StudentDashboard() {
           {/* Mobile Menu */}
           {mobileMenuOpen && (
             <div className="md:hidden border-t border-gray-200 dark:border-gray-700 py-4 space-y-2">
-              <Link href="/student/orders" className="block">
+              <Link href={user?.type === "teacher" ? "/teacher/orders" : "/student/orders"} className="block">
                 <Button variant="ghost" className="w-full justify-start text-gray-600 dark:text-gray-300">
                   {t("dashboard.my_orders")}
                 </Button>

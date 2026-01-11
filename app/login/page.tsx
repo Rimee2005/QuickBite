@@ -66,7 +66,7 @@ export default function LoginPage() {
       if (userType === 'admin') {
         redirectPath = '/admin/dashboard'
       } else if (userType === 'teacher') {
-        redirectPath = '/student/dashboard' // Teachers use student dashboard for now
+        redirectPath = '/teacher/dashboard' // Teachers have their own route (redirects to student dashboard)
       }
 
       toast({
