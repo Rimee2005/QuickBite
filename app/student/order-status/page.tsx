@@ -41,8 +41,9 @@ export default function OrderStatusPage() {
   const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // Redirect if not authenticated (wait for session to load)
+  // Allow both students and teachers
   useEffect(() => {
-    if (!isLoading && (!isAuthenticated || user?.type !== "student")) {
+    if (!isLoading && (!isAuthenticated || (user?.type !== "student" && user?.type !== "teacher"))) {
       router.push("/login")
     }
   }, [isLoading, isAuthenticated, user, router])
@@ -344,7 +345,8 @@ export default function OrderStatusPage() {
     }
   }
 
-  if (!isAuthenticated || user?.type !== "student") {
+  // Allow both students and teachers
+  if (!isAuthenticated || (user?.type !== "student" && user?.type !== "teacher")) {
     return null // Will redirect
   }
 

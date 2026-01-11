@@ -111,8 +111,9 @@ export default function StudentDashboard() {
     
     // Only redirect if we're sure the user is not authenticated
     // Give it a moment for session to establish after login
+    // Allow both students and teachers (teachers use student dashboard)
     const checkAuth = setTimeout(() => {
-      if (!isAuthenticated || (user && user.type !== "student")) {
+      if (!isAuthenticated || (user && user.type !== "student" && user.type !== "teacher")) {
         router.push("/login")
       }
     }, 500) // Wait 500ms for session to establish
@@ -175,7 +176,8 @@ export default function StudentDashboard() {
   }
 
   // Don't render anything while redirecting
-  if (!isAuthenticated || user?.type !== "student") {
+  // Allow both students and teachers (teachers use student dashboard)
+  if (!isAuthenticated || (user?.type !== "student" && user?.type !== "teacher")) {
     return null
   }
 

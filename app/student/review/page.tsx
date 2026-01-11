@@ -43,8 +43,9 @@ function ReviewPageContent() {
   const menuItemId = searchParams.get("menuItemId")
 
   // Redirect if not authenticated (wait for session to load)
+  // Allow both students and teachers
   useEffect(() => {
-    if (!isLoading && (!isAuthenticated || user?.type !== "student")) {
+    if (!isLoading && (!isAuthenticated || (user?.type !== "student" && user?.type !== "teacher"))) {
       router.push("/login")
     }
   }, [isLoading, isAuthenticated, user, router])

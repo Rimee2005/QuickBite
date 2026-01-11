@@ -44,8 +44,9 @@ export default function OrderHistoryPage() {
   const router = useRouter()
 
   // Redirect if not authenticated (wait for session to load)
+  // Allow both students and teachers
   useEffect(() => {
-    if (!isLoading && (!isAuthenticated || user?.type !== "student")) {
+    if (!isLoading && (!isAuthenticated || (user?.type !== "student" && user?.type !== "teacher"))) {
       router.push("/login")
     }
   }, [isLoading, isAuthenticated, user, router])
@@ -60,8 +61,9 @@ export default function OrderHistoryPage() {
   }
 
   // Fetch orders from API
+  // Allow both students and teachers
   useEffect(() => {
-    if (!isAuthenticated || user?.type !== "student") {
+    if (!isAuthenticated || (user?.type !== "student" && user?.type !== "teacher")) {
       return
     }
 
@@ -218,7 +220,8 @@ export default function OrderHistoryPage() {
     return Math.round((totalRating / orderReviews.length) * 10) / 10 // Round to 1 decimal
   }
 
-  if (!isAuthenticated || user?.type !== "student") {
+  // Allow both students and teachers
+  if (!isAuthenticated || (user?.type !== "student" && user?.type !== "teacher")) {
     return null // Will redirect
   }
 
