@@ -40,8 +40,21 @@ export default withAuth(
                           pathname.startsWith("/admin/register") ||
                           pathname.startsWith("/student/login")
 
-        // Allow access to auth routes
-        if (isAuthRoute) return true
+        // Allow access to auth routes (but redirect if already authenticated)
+        if (isAuthRoute) {
+          // If user is already authenticated, redirect to their dashboard
+          if (token) {
+            const userType = token.type as string
+            if (userType === 'admin') {
+              return NextResponse.redirect(new URL("/admin/dashboard", req.url))
+            } else if (userType === 'teacher') {
+              return NextResponse.redirect(new URL("/teacher/dashboard", req.url))
+            } else {
+              return NextResponse.redirect(new URL("/student/dashboard", req.url))
+            }
+          }
+          return true
+        }
 
         // Require authentication for protected routes
         if (isAdminRoute || isStudentRoute || isTeacherRoute) {

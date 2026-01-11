@@ -111,18 +111,24 @@ export default function StudentDashboard() {
     }
     
     // Only redirect if we're sure the user is not authenticated
-    // Give it a moment for session to establish after login
+    // Give it more time for session to establish after login (especially in production)
     const checkAuth = setTimeout(() => {
       // Allow students and teachers (both use student dashboard)
       // Only redirect if not authenticated or if user is admin (admin has separate dashboard)
       if (!isAuthenticated || (user && user.type === "admin")) {
         if (user?.type === "admin") {
-          router.push("/admin/dashboard")
+          // Use window.location to avoid middleware redirect loops
+          if (typeof window !== 'undefined') {
+            window.location.href = "/admin/dashboard"
+          }
         } else {
-          router.push("/login")
+          // Use window.location to avoid middleware redirect loops
+          if (typeof window !== 'undefined') {
+            window.location.href = "/login"
+          }
         }
       }
-    }, 500) // Wait 500ms for session to establish
+    }, 1000) // Increased to 1000ms for production session establishment
     
     return () => clearTimeout(checkAuth)
   }, [isLoading, isAuthenticated, user, router])

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -19,9 +19,40 @@ export default function LoginPage() {
   })
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [isCheckingSession, setIsCheckingSession] = useState(true)
   const { toast } = useToast()
   const router = useRouter()
   const { t } = useLanguage()
+
+  // Check if user is already logged in and redirect
+  useEffect(() => {
+    const checkExistingSession = async () => {
+      try {
+        const session = await getSession()
+        if (session?.user) {
+          // User is already logged in, redirect to appropriate dashboard
+          const userType = session.user.type || 'student'
+          let redirectPath = '/student/dashboard'
+          if (userType === 'admin') {
+            redirectPath = '/admin/dashboard'
+          } else if (userType === 'teacher') {
+            redirectPath = '/teacher/dashboard'
+          }
+          
+          // Use window.location in production to avoid middleware issues
+          if (typeof window !== 'undefined') {
+            window.location.href = redirectPath
+          }
+        }
+      } catch (error) {
+        console.error('Error checking session:', error)
+      } finally {
+        setIsCheckingSession(false)
+      }
+    }
+
+    checkExistingSession()
+  }, [])
 
   const handleChange = (field: string, value: string) => {
     setFormData(prev => ({
@@ -48,10 +79,10 @@ export default function LoginPage() {
       // Wait for session to be established - retry with delay for production
       let session = null
       let attempts = 0
-      const maxAttempts = 10
+      const maxAttempts = 15 // Increased attempts for production
       
       while (!session && attempts < maxAttempts) {
-        await new Promise(resolve => setTimeout(resolve, 200)) // Wait 200ms
+        await new Promise(resolve => setTimeout(resolve, 300)) // Increased delay to 300ms
         session = await getSession()
         attempts++
       }
@@ -66,20 +97,21 @@ export default function LoginPage() {
       if (userType === 'admin') {
         redirectPath = '/admin/dashboard'
       } else if (userType === 'teacher') {
-        redirectPath = '/teacher/dashboard' // Teachers have their own route (redirects to student dashboard)
+        redirectPath = '/teacher/dashboard'
       }
 
+      // Show success toast
       toast({
         title: t("login.success"),
         description: t("login.welcome_back_msg"),
       })
       
-      // Use window.location for production to ensure full page reload and cookie persistence
-      if (process.env.NODE_ENV === 'production') {
+      // Always use window.location in production to ensure full page reload and cookie persistence
+      // This prevents middleware redirect loops
+      if (typeof window !== 'undefined') {
+        // Small delay to ensure cookie is set
+        await new Promise(resolve => setTimeout(resolve, 100))
         window.location.href = redirectPath
-      } else {
-        router.push(redirectPath)
-        router.refresh()
       }
     } catch (error) {
       toast({
@@ -90,6 +122,15 @@ export default function LoginPage() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  // Show loading while checking session
+  if (isCheckingSession) {
+    return (
+      <div className="min-h-screen bg-[conic-gradient(at_top_right,_var(--tw-gradient-stops))] from-emerald-200 via-emerald-50 to-white dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    )
   }
 
   return (

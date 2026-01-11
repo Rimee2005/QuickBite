@@ -126,6 +126,7 @@ export const authOptions: NextAuthOptions = {
         sameSite: 'lax', // Use 'lax' for same-origin requests (Next.js + NextAuth on same domain)
         path: '/',
         secure: process.env.NODE_ENV === 'production', // Only secure in production (HTTPS required)
+        maxAge: 30 * 24 * 60 * 60, // 30 days
         // Don't set domain - browser will handle it for same-origin requests
       },
     },
