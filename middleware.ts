@@ -44,17 +44,8 @@ export default withAuth(
         if (isAuthRoute) {
           // If user is already authenticated, redirect to their dashboard
           // Only redirect if we have a valid token with user type
-          if (token && token.type) {
-            const userType = token.type as string
-            if (userType === 'admin') {
-              return NextResponse.redirect(new URL("/admin/dashboard", req.url))
-            } else if (userType === 'teacher') {
-              return NextResponse.redirect(new URL("/teacher/dashboard", req.url))
-            } else if (userType === 'student') {
-              return NextResponse.redirect(new URL("/student/dashboard", req.url))
-            }
-          }
-          // Allow access to login/register if no token or invalid token
+          // IMPORTANT: Don't redirect immediately - let client handle it to avoid loops
+          // The client-side login page will check session and redirect if needed
           return true
         }
 

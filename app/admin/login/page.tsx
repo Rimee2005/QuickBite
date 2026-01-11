@@ -46,18 +46,45 @@ export default function AdminLoginPage() {
       }
 
       // Wait for session to be established - retry with delay for production
+      // Use a more reliable approach: check session API directly
       let session = null
       let attempts = 0
-      const maxAttempts = 10
+      const maxAttempts = 20 // Increased attempts for production
       
       while (!session && attempts < maxAttempts) {
-        await new Promise(resolve => setTimeout(resolve, 200)) // Wait 200ms
-        session = await getSession()
+        await new Promise(resolve => setTimeout(resolve, 400)) // Increased delay to 400ms
+        
+        try {
+          // Try to get session - this will trigger cookie validation
+          session = await getSession()
+          
+          // If still no session, try fetching from API directly
+          if (!session) {
+            const response = await fetch('/api/auth/session', {
+              method: 'GET',
+              credentials: 'include', // Important: include cookies
+              headers: {
+                'Content-Type': 'application/json',
+              },
+            })
+            
+            if (response.ok) {
+              const sessionData = await response.json()
+              if (sessionData?.user) {
+                session = sessionData
+              }
+            }
+          }
+        } catch (error) {
+          // Continue retrying
+          console.error('Session fetch error:', error)
+        }
+        
         attempts++
       }
 
       if (!session?.user) {
-        throw new Error("Session not established. Please try again.")
+        throw new Error("Session not established. Please check your credentials and try again.")
       }
 
       if (session.user.type === "admin") {
@@ -66,12 +93,13 @@ export default function AdminLoginPage() {
           description: t("login.welcome_admin"),
         })
         
-        // Use window.location for production to ensure full page reload and cookie persistence
-        if (process.env.NODE_ENV === 'production') {
+        // CRITICAL: Always use window.location.href in production
+        // This ensures full page reload and cookie persistence
+        if (typeof window !== 'undefined') {
+          // Wait a bit longer to ensure cookie is fully set and persisted
+          await new Promise(resolve => setTimeout(resolve, 300))
+          // Use window.location.href to force full page reload
           window.location.href = "/admin/dashboard"
-        } else {
-          router.push("/admin/dashboard")
-          router.refresh()
         }
       } else {
         // Not an admin

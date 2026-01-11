@@ -121,14 +121,15 @@ export default function StudentDashboard() {
           if (typeof window !== 'undefined') {
             window.location.href = "/admin/dashboard"
           }
-        } else {
+        } else if (!isAuthenticated) {
+          // Only redirect to login if definitely not authenticated
           // Use window.location to avoid middleware redirect loops
           if (typeof window !== 'undefined') {
             window.location.href = "/login"
           }
         }
       }
-    }, 1000) // Increased to 1000ms for production session establishment
+    }, 1500) // Increased to 1500ms for production session establishment
     
     return () => clearTimeout(checkAuth)
   }, [isLoading, isAuthenticated, user, router])
