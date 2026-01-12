@@ -81,9 +81,13 @@ export async function POST(
     // Send rating & review email
     if (updatedOrder.userEmail) {
       try {
-        // Generate review link - user can select which item to review
+        // Generate review link - use dynamic route based on user type
+        // Teachers and students both use the same review page, but use teacher route for teachers
         const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000'
-        const reviewLink = `${baseUrl}/student/review?orderId=${updatedOrder.orderId}`
+        const reviewPath = session.user.type === 'teacher' 
+          ? '/teacher/review' 
+          : '/student/review'
+        const reviewLink = `${baseUrl}${reviewPath}?orderId=${updatedOrder.orderId}`
 
         const emailHtml = getRatingReviewEmailTemplate(updatedOrder, reviewLink)
         await sendEmail({

@@ -39,7 +39,7 @@ export async function GET(
       )
     }
 
-    // Students can only see their own orders
+    // Students and teachers can only see their own orders, admin can see all
     if (session.user.type !== 'admin' && order.userId !== session.user.id) {
       return NextResponse.json(
         { error: 'Unauthorized' },

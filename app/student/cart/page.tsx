@@ -141,7 +141,11 @@ export default function CartPage() {
       })
 
       // Redirect to order status with the new order ID
-      router.push(`/student/order-status?orderId=${order.orderId}`)
+      // Use dynamic route based on user type
+      const orderStatusPath = user?.type === "teacher" 
+        ? `/teacher/order-status?orderId=${order.orderId}`
+        : `/student/order-status?orderId=${order.orderId}`
+      router.push(orderStatusPath)
     } catch (error: any) {
       console.error('Error placing order:', error)
       toast({

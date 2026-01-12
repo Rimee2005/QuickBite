@@ -68,7 +68,8 @@ export default function OrderStatusPage() {
           variant: "destructive",
         })
       }, 0)
-      router.push("/student/dashboard")
+        const dashboardPath = user?.type === "teacher" ? "/teacher/dashboard" : "/student/dashboard"
+        router.push(dashboardPath)
       return
     }
 
@@ -306,8 +307,12 @@ export default function OrderStatusPage() {
       }, 0)
       
       // Redirect to review page after a short delay
+      // Use dynamic route based on user type
       setTimeout(() => {
-        router.push(`/student/review?orderId=${orderId}`)
+        const reviewPath = user?.type === "teacher"
+          ? `/teacher/review?orderId=${orderId}`
+          : `/student/review?orderId=${orderId}`
+        router.push(reviewPath)
       }, 2000)
     } catch (error: any) {
       console.error('Error marking order as completed:', error)
@@ -355,7 +360,9 @@ export default function OrderStatusPage() {
     }
   }
 
-  if (!isAuthenticated || user?.type !== "student") {
+  // Allow both students and teachers (teachers use student order status)
+  // Only block if not authenticated or if user is admin
+  if (!isAuthenticated || user?.type === "admin") {
     return null // Will redirect
   }
 
@@ -367,7 +374,7 @@ export default function OrderStatusPage() {
           <div className="flex items-center justify-between h-20 sm:h-24 gap-4 sm:gap-6 py-3 sm:py-4">
             {/* Left Side - Back Button and Title */}
             <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
-              <Link href="/student/dashboard">
+              <Link href={user?.type === "teacher" ? "/teacher/dashboard" : "/student/dashboard"}>
                 <Button
                   variant="outline"
                   size="sm"
@@ -569,7 +576,9 @@ export default function OrderStatusPage() {
                             {order.items.map((item) => (
                               <Link
                                 key={item.menuItemId}
-                                href={`/student/review?orderId=${orderId}&menuItemId=${item.menuItemId}`}
+                                href={user?.type === "teacher" 
+                                  ? `/teacher/review?orderId=${orderId}&menuItemId=${item.menuItemId}`
+                                  : `/student/review?orderId=${orderId}&menuItemId=${item.menuItemId}`}
                               >
                                 <Button
                                   variant="outline"
@@ -582,7 +591,7 @@ export default function OrderStatusPage() {
                             ))}
                           </div>
                         )}
-                        <Link href="/student/dashboard" className="block mt-4">
+                        <Link href={user?.type === "teacher" ? "/teacher/dashboard" : "/student/dashboard"} className="block mt-4">
                           <Button className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-bold py-3 px-6 rounded-[1.5rem] transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1">
                             {t("status.order_again")}
                           </Button>
@@ -650,7 +659,7 @@ export default function OrderStatusPage() {
               <CardContent className="p-4 sm:p-6 text-center">
                 <h3 className="font-bold text-emerald-800 dark:text-emerald-200 mb-4">{t("status.quick_actions")}</h3>
                 <div className="space-y-3">
-                  <Link href="/student/dashboard">
+                  <Link href={user?.type === "teacher" ? "/teacher/dashboard" : "/student/dashboard"}>
                     <Button
                       variant="outline"
                       className="w-full border-emerald-300 text-emerald-700 hover:bg-emerald-200 dark:border-emerald-600 dark:text-emerald-300 dark:hover:bg-emerald-800"
@@ -658,7 +667,7 @@ export default function OrderStatusPage() {
                       {t("status.browse_menu")}
                     </Button>
                   </Link>
-                  <Link href="/student/orders">
+                  <Link href={user?.type === "teacher" ? "/teacher/orders" : "/student/orders"}>
                     <Button
                       variant="outline"
                       className="w-full border-emerald-300 text-emerald-700 hover:bg-emerald-200 dark:border-emerald-600 dark:text-emerald-300 dark:hover:bg-emerald-800"
