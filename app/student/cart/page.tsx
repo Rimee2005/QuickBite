@@ -154,7 +154,9 @@ export default function CartPage() {
     }
   }
 
-  if (!isAuthenticated || user?.type !== "student") {
+  // Allow both students and teachers (teachers use student cart)
+  // Only block if not authenticated or if user is admin
+  if (!isAuthenticated || user?.type === "admin") {
     return null // Will redirect
   }
 
@@ -172,7 +174,7 @@ export default function CartPage() {
           <p className="text-gray-600 dark:text-gray-300 mb-6 sm:mb-8 text-base sm:text-lg">
             {t("cart.empty.subtitle")}
           </p>
-          <Link href="/student/dashboard">
+          <Link href={user?.type === "teacher" ? "/teacher/dashboard" : "/student/dashboard"}>
             <Button className="bg-gradient-to-r from-emerald-400 to-emerald-600 hover:from-emerald-500 hover:to-emerald-700 text-white font-medium py-3 sm:py-4 px-6 sm:px-8 rounded-[1.5rem] transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1 text-sm sm:text-base">
               <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
               {t("cart.empty.browse")}
@@ -201,7 +203,7 @@ export default function CartPage() {
             
             {/* Right Side - Back to Menu Button and Cart Icon */}
             <div className="flex items-center gap-3 sm:gap-4 flex-shrink-0">
-              <Link href="/student/dashboard">
+              <Link href={user?.type === "teacher" ? "/teacher/dashboard" : "/student/dashboard"}>
                 <Button
                   variant="outline"
                   size="sm"

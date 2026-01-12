@@ -6,11 +6,6 @@ import { User } from "@/lib/models/User"
 import type { NextAuthOptions } from "next-auth"
 
 export const authOptions: NextAuthOptions = {
-  // Use NEXTAUTH_URL from environment, fallback to auto-detect
-  // This is critical for production
-  ...(process.env.NEXTAUTH_URL && { 
-    url: process.env.NEXTAUTH_URL 
-  }),
   providers: [
     CredentialsProvider({
       name: "credentials",

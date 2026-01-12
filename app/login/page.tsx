@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import { ArrowLeft, Mail, Lock, Coffee, Eye, EyeOff } from "lucide-react"
 import Link from "next/link"
-import { signIn, getSession } from "next-auth/react"
+import { signIn } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { useLanguage } from "@/contexts/language-context"
 
@@ -19,71 +19,9 @@ export default function LoginPage() {
   })
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
-  const [isCheckingSession, setIsCheckingSession] = useState(true)
   const { toast } = useToast()
   const router = useRouter()
   const { t } = useLanguage()
-
-  // Check if user is already logged in and redirect
-  // Add timeout to prevent hanging
-  useEffect(() => {
-    let isMounted = true
-    let timeoutId: NodeJS.Timeout
-
-    const checkExistingSession = async () => {
-      try {
-        // Set timeout to prevent hanging (max 2 seconds)
-        const sessionPromise = getSession()
-        const timeoutPromise = new Promise((_, reject) => {
-          timeoutId = setTimeout(() => reject(new Error('Session check timeout')), 2000)
-        })
-
-        const session = await Promise.race([sessionPromise, timeoutPromise]) as any
-
-        if (!isMounted) return
-
-        if (session?.user) {
-          // User is already logged in, redirect to appropriate dashboard
-          const userType = session.user.type || 'student'
-          let redirectPath = '/student/dashboard'
-          if (userType === 'admin') {
-            redirectPath = '/admin/dashboard'
-          } else if (userType === 'teacher') {
-            redirectPath = '/teacher/dashboard'
-          }
-          
-          // Use window.location in production to avoid middleware issues
-          if (typeof window !== 'undefined') {
-            window.location.href = redirectPath
-            return // Don't set isCheckingSession to false if redirecting
-          }
-        }
-      } catch (error) {
-        // Silently fail - let middleware handle redirects
-        // Don't log errors in production to avoid console spam
-        if (process.env.NODE_ENV === 'development') {
-          console.error('Error checking session:', error)
-        }
-      } finally {
-        if (isMounted) {
-          clearTimeout(timeoutId)
-          setIsCheckingSession(false)
-        }
-      }
-    }
-
-    // Only check session in client-side
-    if (typeof window !== 'undefined') {
-      checkExistingSession()
-    } else {
-      setIsCheckingSession(false)
-    }
-
-    return () => {
-      isMounted = false
-      if (timeoutId) clearTimeout(timeoutId)
-    }
-  }, [])
 
   const handleChange = (field: string, value: string) => {
     setFormData(prev => ({
@@ -107,71 +45,27 @@ export default function LoginPage() {
         throw new Error(result.error)
       }
 
-      // Wait for session to be established - retry with delay for production
-      // Use a more reliable approach: check session API directly
-      let session = null
-      let attempts = 0
-      const maxAttempts = 20 // Increased attempts for production
+      // After successful signIn, redirect immediately
+      // Don't check session - it causes loops in production
+      // NextAuth sets the cookie, redirect and let middleware/dashboard handle auth check
       
-      while (!session && attempts < maxAttempts) {
-        await new Promise(resolve => setTimeout(resolve, 400)) // Increased delay to 400ms
-        
-        try {
-          // Try to get session - this will trigger cookie validation
-          session = await getSession()
-          
-          // If still no session, try fetching from API directly
-          if (!session) {
-            const response = await fetch('/api/auth/session', {
-              method: 'GET',
-              credentials: 'include', // Important: include cookies
-              headers: {
-                'Content-Type': 'application/json',
-              },
-            })
-            
-            if (response.ok) {
-              const sessionData = await response.json()
-              if (sessionData?.user) {
-                session = sessionData
-              }
-            }
-          }
-        } catch (error) {
-          // Continue retrying
-          console.error('Session fetch error:', error)
-        }
-        
-        attempts++
-      }
-
-      if (!session?.user) {
-        throw new Error("Session not established. Please check your credentials and try again.")
-      }
-
-      const userType = session.user.type || 'student'
+      // Show success toast (use setTimeout to prevent blocking)
+      setTimeout(() => {
+        toast({
+          title: t("login.success"),
+          description: t("login.welcome_back_msg"),
+        })
+      }, 0)
       
-      let redirectPath = '/student/dashboard'
-      if (userType === 'admin') {
-        redirectPath = '/admin/dashboard'
-      } else if (userType === 'teacher') {
-        redirectPath = '/teacher/dashboard'
-      }
-
-      // Show success toast
-      toast({
-        title: t("login.success"),
-        description: t("login.welcome_back_msg"),
-      })
+      // Wait for cookie to be set, then redirect
+      // Use a longer delay to ensure cookie is persisted
+      await new Promise(resolve => setTimeout(resolve, 1000))
       
-      // CRITICAL: Always use window.location.href in production
-      // This ensures full page reload and cookie persistence
-      // router.push() can cause issues with middleware redirects
+      // CRITICAL: Always use window.location.href
+      // This forces full page reload and ensures cookies are sent
+      // Redirect to student dashboard by default - middleware will redirect admin/teacher if needed
       if (typeof window !== 'undefined') {
-        // Wait a bit longer to ensure cookie is fully set and persisted
-        await new Promise(resolve => setTimeout(resolve, 300))
-        // Use window.location.href to force full page reload
-        window.location.href = redirectPath
+        window.location.href = '/student/dashboard'
       }
     } catch (error) {
       toast({
@@ -182,25 +76,6 @@ export default function LoginPage() {
     } finally {
       setIsLoading(false)
     }
-  }
-
-  // Auto-hide loading after 2 seconds as fallback to prevent hanging
-  useEffect(() => {
-    if (isCheckingSession) {
-      const timeout = setTimeout(() => {
-        setIsCheckingSession(false)
-      }, 2000)
-      return () => clearTimeout(timeout)
-    }
-  }, [isCheckingSession])
-
-  // Show loading while checking session
-  if (isCheckingSession) {
-    return (
-      <div className="min-h-screen bg-[conic-gradient(at_top_right,_var(--tw-gradient-stops))] from-emerald-200 via-emerald-50 to-white dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    )
   }
 
   return (

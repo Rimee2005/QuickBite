@@ -51,6 +51,8 @@ export default withAuth(
 
         // Require authentication for protected routes
         if (isAdminRoute || isStudentRoute || isTeacherRoute) {
+          // Return true if token exists, false otherwise
+          // withAuth will handle the redirect to login automatically
           return !!token
         }
 

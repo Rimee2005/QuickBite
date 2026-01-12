@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import { ArrowLeft, Mail, Lock, Shield, Eye, EyeOff } from "lucide-react"
 import Link from "next/link"
-import { signIn, getSession, signOut } from "next-auth/react"
+import { signIn, signOut } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { useLanguage } from "@/contexts/language-context"
 
@@ -45,70 +45,27 @@ export default function AdminLoginPage() {
         throw new Error(result.error)
       }
 
-      // Wait for session to be established - retry with delay for production
-      // Use a more reliable approach: check session API directly
-      let session = null
-      let attempts = 0
-      const maxAttempts = 20 // Increased attempts for production
+      // After successful signIn, redirect immediately
+      // Don't check session - it causes loops in production
+      // NextAuth sets the cookie, redirect and let middleware/dashboard handle auth check
       
-      while (!session && attempts < maxAttempts) {
-        await new Promise(resolve => setTimeout(resolve, 400)) // Increased delay to 400ms
-        
-        try {
-          // Try to get session - this will trigger cookie validation
-          session = await getSession()
-          
-          // If still no session, try fetching from API directly
-          if (!session) {
-            const response = await fetch('/api/auth/session', {
-              method: 'GET',
-              credentials: 'include', // Important: include cookies
-              headers: {
-                'Content-Type': 'application/json',
-              },
-            })
-            
-            if (response.ok) {
-              const sessionData = await response.json()
-              if (sessionData?.user) {
-                session = sessionData
-              }
-            }
-          }
-        } catch (error) {
-          // Continue retrying
-          console.error('Session fetch error:', error)
-        }
-        
-        attempts++
-      }
-
-      if (!session?.user) {
-        throw new Error("Session not established. Please check your credentials and try again.")
-      }
-
-      if (session.user.type === "admin") {
+      // Show success toast (use setTimeout to prevent blocking)
+      setTimeout(() => {
         toast({
           title: t("login.success"),
           description: t("login.welcome_admin"),
         })
-        
-        // CRITICAL: Always use window.location.href in production
-        // This ensures full page reload and cookie persistence
-        if (typeof window !== 'undefined') {
-          // Wait a bit longer to ensure cookie is fully set and persisted
-          await new Promise(resolve => setTimeout(resolve, 300))
-          // Use window.location.href to force full page reload
-          window.location.href = "/admin/dashboard"
-        }
-      } else {
-        // Not an admin
-        toast({
-          title: t("login.access_denied"),
-          description: t("login.not_admin"),
-          variant: "destructive",
-        })
-        await signOut({ redirect: false })
+      }, 0)
+      
+      // Wait for cookie to be set, then redirect
+      // Use a longer delay to ensure cookie is persisted
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      // CRITICAL: Always use window.location.href
+      // This forces full page reload and ensures cookies are sent
+      // Redirect to admin dashboard - middleware will handle if not admin
+      if (typeof window !== 'undefined') {
+        window.location.href = "/admin/dashboard"
       }
     } catch (error) {
       toast({
